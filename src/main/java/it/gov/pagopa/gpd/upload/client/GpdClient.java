@@ -41,7 +41,7 @@ public class GpdClient {
 
         int status = callCreateDebtPositions(fiscalCode, paymentPositionModel, logger, requestId);
 
-        if (status == 200) {
+        if (status >= 200 && status < 300) {
             return RetryStep.DONE;
         }
         if (status >= 400 && status < 500) {

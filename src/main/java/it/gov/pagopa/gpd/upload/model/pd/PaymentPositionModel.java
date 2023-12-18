@@ -52,6 +52,7 @@ public class PaymentPositionModel implements Serializable {
     @Email(message = "Please provide a valid email address")
     private String email;
     private String phone;
+    @NotNull
     private Boolean switchToExpired;
 
     // Payment Position properties

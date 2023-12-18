@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload.model.pd;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.AllArgsConstructor;
@@ -40,6 +41,7 @@ public class PaymentOptionModel implements Serializable {
     @NotNull(message = "is partial payment is required")
     private Boolean isPartialPayment;
     @NotNull(message = "due date is required")
+    @JsonFormat(pattern="yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime dueDate;
     private LocalDateTime retentionDate;
     private long fee;
