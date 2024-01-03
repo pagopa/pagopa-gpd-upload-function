@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
 import it.gov.pagopa.gpd.upload.entity.Status;
+import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
@@ -65,7 +66,21 @@ public class UploadFunction {
 
     public void createPaymentPositionBlocks(Logger logger, String invocationId, String fiscalCode, String key, PaymentPositionsModel paymentPositionsModel) throws Exception {
         long t1 = System.currentTimeMillis();
-        Status status = StatusRepository.getInstance(logger).readStatus(key, fiscalCode);
+        Status statusIfNotExist = Status.builder()
+                                    .id(key)
+                                    .fiscalCode(fiscalCode)
+                                    .upload(Upload.builder()
+                                                    .current(0)
+                                                    .total(paymentPositionsModel.getPaymentPositions().size())
+                                                    .successIUPD(new ArrayList<>())
+                                                    .failedIUPD(new ArrayList<>())
+                                                    .start(LocalDateTime.now()).build())
+                                    .build();
+        Status status = StatusRepository.getInstance(logger).createIfNotExist(key, fiscalCode, statusIfNotExist);
+        if(status.upload.getEnd() != null) {
+            logger.log(Level.INFO, () -> "Upload already processed. Upload finished at " + status.upload.getEnd());
+            return;
+        }
         int blockSize = Integer.parseInt(BLOCK_SIZE);
         int index = 0;
         int totalPosition = paymentPositionsModel.getPaymentPositions().size();
@@ -97,7 +112,7 @@ public class UploadFunction {
         }
 
         long uploadDuration = System.currentTimeMillis() - t1;
-        logger.log(Level.INFO, "[PERFORMANCE] Upload block time: " + uploadDuration);
+        logger.log(Level.INFO, "Elapsed upload blocks time: " + uploadDuration);
     }
 
     public Status updateStatus(List<String> IUPDs, Status status, RetryStep response, int blockSize) {
