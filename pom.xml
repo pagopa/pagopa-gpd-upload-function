@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa.gpd.upload</groupId>
     <artifactId>gpd-upload-function</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.2-1-PAGOPA-1362-dev</version>
     <packaging>jar</packaging>
 
     <name>GPD-Upload-Function</name>
