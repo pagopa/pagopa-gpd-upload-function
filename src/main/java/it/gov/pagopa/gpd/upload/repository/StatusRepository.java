@@ -1,7 +1,6 @@
 package it.gov.pagopa.gpd.upload.repository;
 
 import com.azure.cosmos.*;
-import com.azure.cosmos.models.CosmosItemOperation;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
 import com.azure.cosmos.models.PartitionKey;

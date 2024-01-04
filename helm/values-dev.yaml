@@ -79,13 +79,25 @@ microservice-chart:
   fileConfig: {}
   envConfig:
     WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
+    FUNCTIONS_WORKER_RUNTIME: "java"
+    GPD_HOST: "https://api.dev.platform.pagopa.it/gpd/api/v2"
+    RETRY_MAX_ATTEMPTS: "1"
+    RETRY_MAX_DELAY: "10000"
+    BLOCK_SIZE: "1"
+    COSMOS_URI: "https://pagopa-d-weu-gps-cosmos-account.documents.azure.com:443/"
+    GPD_DB_NAME: "gpd_db"
+    GPD_CONTAINER_NAME: "gpd_upload_status"
   envFieldRef:
     APP_NAME: "metadata.labels['app.kubernetes.io/instance']"
     APP_VERSION: "metadata.labels['app.kubernetes.io/version']"
   envSecret:
     APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string'
+    AzureWebJobsStorage: 'gpd-upload-sa-connection-string'
+    GPD_SA_CONNECTION_STRING: 'gpd-upload-sa-connection-string'
+    GPD_SUBSCRIPTION_KEY: 'gpd-core-key-for-gpd-upload'
+    COSMOS_KEY: 'gpd-upload-db-key'
   keyvault:
-    name: "pagopa-d-bizevents-kv"
+    name: "pagopa-d-gps-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
   nodeSelector: {}
   tolerations: []
