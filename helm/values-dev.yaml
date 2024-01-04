@@ -1,9 +1,9 @@
 microservice-chart:
-  namespace: "<namespace>" # TODO
+  namespace: "gps"
   nameOverride: ""
   fullnameOverride: ""
   image:
-    repository: pagopadcommonacr.azurecr.io/pagopa<project-name>  # TODO
+    repository: ghcr.io/pagopa/pagopa-gpd-upload-function
     tag: "0.0.1"
     pullPolicy: Always
   # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
@@ -23,14 +23,25 @@ microservice-chart:
     periodSeconds: 10
   deployment:
     create: true
-  service:
+  serviceMonitor:
     create: true
+    endpoints:
+      - interval: 10s #jmx-exporter
+        targetPort: 12345
+        path: /metrics
+  ports:
+    - 80 #http
+    - 12345 #jmx-exporter
+  service:
     type: ClusterIP
-    port: 80
+    ports:
+      - 80 #http
+      - 12345 #jmx-exporter
   ingress:
     create: true
-    host: "weudev.<namespace>.internal.dev.platform.pagopa.it"  # TODO
-    path: /pagopa-<project-name>-service/(.*) # TODO
+    host: "weudev.gps.internal.dev.platform.pagopa.it"
+    path: /pagopa-gpd-upload-function/(.*)
+    servicePort: 80
   serviceAccount:
     create: false
     annotations: {}
@@ -44,14 +55,14 @@ microservice-chart:
   resources:
     requests:
       memory: "512Mi"
-      cpu: "0.25"
+      cpu: "0.5"
     limits:
       memory: "512Mi"
-      cpu: "0.25"
+      cpu: "0.5"
   autoscaling:
     enable: true
-    minReplica: 3
-    maxReplica: 10
+    minReplica: 1
+    maxReplica: 1
     pollingInterval: 10 # seconds
     cooldownPeriod: 50 # seconds
     triggers:
@@ -60,14 +71,49 @@ microservice-chart:
           # Required
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
           value: "75"
+      - type: memory
+        metadata:
+          # Required
+          type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
+          value: "70"
+  fileConfig: {}
   envConfig:
-    WEBSITE_SITE_NAME: "pagopa<project-name>" # required to show cloud role name in application insights # TODO
+    WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
     FUNCTIONS_WORKER_RUNTIME: "java"
+    GPD_HOST: "https://api.dev.platform.pagopa.it/gpd/api/v2"
+    RETRY_MAX_ATTEMPTS: "1"
+    RETRY_MAX_DELAY: "10000"
+    BLOCK_SIZE: "1"
+    COSMOS_URI: "https://pagopa-d-weu-gps-cosmos-account.documents.azure.com:443/"
+    GPD_DB_NAME: "gpd_db"
+    GPD_CONTAINER_NAME: "gpd_upload_status"
+  envFieldRef:
+    APP_NAME: "metadata.labels['app.kubernetes.io/instance']"
+    APP_VERSION: "metadata.labels['app.kubernetes.io/version']"
   envSecret:
-    APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string' # TODO set in kv
+    APPLICATIONINSIGHTS_CONNECTION_STRING: 'ai-d-connection-string'
+    AzureWebJobsStorage: 'gpd-upload-sa-connection-string'
+    GPD_SA_CONNECTION_STRING: 'gpd-upload-sa-connection-string'
+    GPD_SUBSCRIPTION_KEY: 'gpd-core-key-for-gpd-upload'
+    COSMOS_KEY: 'gpd-upload-db-key'
   keyvault:
-    name: "pagopa-d-<namespace>-kv" # TODO
+    name: "pagopa-d-gps-kv"
     tenantId: "7788edaf-0346-4068-9d79-c868aed15b3d"
   nodeSelector: {}
   tolerations: []
-  affinity: {}
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: node_type
+                operator: In
+                values:
+                  - "user"
+  canaryDelivery:
+    create: false
+    deployment:
+      create: false
+      image:
+        tag: 0.5.6
+  create: false

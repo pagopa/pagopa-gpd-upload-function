@@ -37,3 +37,8 @@ hs_err_pid*
 local.settings.json
 bin/
 obj/
+
+# Environment
+**/.env
+/helm/Chart.lock
+**/.terraform/
