@@ -4,7 +4,6 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpRequestMessage;
 import com.microsoft.azure.functions.HttpResponseMessage;
 import com.microsoft.azure.functions.HttpStatus;
-import it.gov.pagopa.project.Example;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -21,7 +20,7 @@ import static org.mockito.Mockito.*;
 class ExampleTest {
 
     @Spy
-    Example function;
+    Info function;
 
     @Mock
     ExecutionContext context;

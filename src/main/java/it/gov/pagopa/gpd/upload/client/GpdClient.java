@@ -69,6 +69,8 @@ public class GpdClient {
 
             logger.log(Level.INFO, () -> String.format(
                     "[requestId=%s][createDebtPositions] Response: %s", requestId, response.getStatus()));
+            logger.log(Level.INFO, () -> String.format(
+                    "[requestId=%s][createDebtPositions] Response: %s", requestId, response.readEntity(String.class)));
 
             return response.getStatus();
         } catch (Exception e) {
