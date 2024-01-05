@@ -12,4 +12,8 @@ public class ResponseGPD {
     private RetryStep retryStep;
     private String message;
     private int status;
+
+    public void setRetryStep(RetryStep retryStep) {
+        this.retryStep = retryStep;
+    }
 }

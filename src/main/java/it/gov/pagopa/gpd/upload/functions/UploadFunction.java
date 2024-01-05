@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
+import it.gov.pagopa.gpd.upload.entity.ResponseGPD;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.exception.AppException;
@@ -89,7 +90,7 @@ public class UploadFunction {
             logger.log(Level.INFO,
                     "Process block for payment positions from index " + index + ", block size: " + blockSize + ", total size: " + totalPosition);
             block = new PaymentPositionsModel(paymentPositionsModel.getPaymentPositions().subList(index, index+blockSize));
-            RetryStep response = GpdClient.getInstance().createDebtPositions(fiscalCode, block, logger, invocationId);
+            ResponseGPD response = GpdClient.getInstance().createDebtPositions(fiscalCode, block, logger, invocationId);
             List<String> IUPDs = block.getPaymentPositions().stream().map(item -> item.getIupd()).collect(Collectors.toList());
             this.updateStatus(IUPDs, status, response, blockSize);
             StatusRepository.getInstance(logger).upsertStatus(key, status);
@@ -115,13 +116,14 @@ public class UploadFunction {
         logger.log(Level.INFO, "Elapsed upload blocks time: " + uploadDuration);
     }
 
-    public Status updateStatus(List<String> IUPDs, Status status, RetryStep response, int blockSize) {
-        if(response.equals(RetryStep.DONE)) {
+    public Status updateStatus(List<String> IUPDs, Status status, ResponseGPD response, int blockSize) {
+        RetryStep responseRetryStep = response.getRetryStep();
+        if(responseRetryStep.equals(RetryStep.DONE)) {
             ArrayList<String> successIUPDs = status.upload.getSuccessIUPD();
             successIUPDs.addAll(IUPDs);
             status.upload.setSuccessIUPD(successIUPDs);
-        } else if(response.equals(RetryStep.ERROR) || response.equals(RetryStep.RETRY) || response.equals(RetryStep.NONE)  ) {
-            ArrayList<String> failedIUPDs = status.upload.getFailedIUPD();
+        } else if(responseRetryStep.equals(RetryStep.ERROR) || responseRetryStep.equals(RetryStep.RETRY) || responseRetryStep.equals(RetryStep.NONE)  ) {
+            ArrayList<String> skippedIUPDs = status.upload.getFailedIUPDs().getFailedIUPD();
             failedIUPDs.addAll(IUPDs);
             status.upload.setFailedIUPD(failedIUPDs);
         }

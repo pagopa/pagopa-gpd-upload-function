@@ -34,26 +34,30 @@ public class GpdClient {
     }
 
     @SneakyThrows
-    public RetryStep createDebtPositions(String fiscalCode, PaymentPositionsModel paymentPositionModel, Logger logger, String invocationId) {
+    public ResponseGPD createDebtPositions(String fiscalCode, PaymentPositionsModel paymentPositionModel, Logger logger, String invocationId) {
         String requestId = UUID.randomUUID().toString();
 
         logger.log(Level.INFO, () -> String.format(
                 "[id=%s][requestId=%s][GPD CALL][createDebtPositions]", invocationId, requestId));
 
-        int status = callCreateDebtPositions(fiscalCode, paymentPositionModel, logger, requestId);
+        ResponseGPD responseGPD = callCreateDebtPositions(fiscalCode, paymentPositionModel, logger, requestId);
+        int status = responseGPD.getStatus();
 
         if (status >= 200 && status < 300) {
-            return RetryStep.DONE;
+            responseGPD.setRetryStep(RetryStep.DONE);
         }
         if (status >= 400 && status < 500) {
             // skip retry if the status is 4xx
-            return RetryStep.ERROR;
+            responseGPD.setRetryStep(RetryStep.ERROR);
+        }
+        else {
+            responseGPD.setRetryStep(RetryStep.RETRY);
         }
 
         logger.log(Level.WARNING, () -> String.format(
                 "[id=%s][requestId=%s][GPD CALL][createDebtPositions] HTTP status %s", invocationId, requestId, status));
 
-        return RetryStep.RETRY;
+        return responseGPD;
     }
 
     private ResponseGPD callCreateDebtPositions(String idPA, PaymentPositionsModel paymentPositions, Logger logger, String requestId) {
@@ -75,14 +79,14 @@ public class GpdClient {
 
             return ResponseGPD.builder()
                     .status(response.getStatus())
-                    .message(response.readEntity(String.class))
+                    .message(response.readEntity(String.class).substring(0, 150))
                     .build();
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format(
                     "[requestId=%s][createDebtPositions] Exception: %s", requestId, e.getMessage()));
             return ResponseGPD.builder()
                     .status(-1)
-                    .message(e.getMessage())
+                    .message(e.getMessage().substring(0, 150))
                     .build();
         }
     }
