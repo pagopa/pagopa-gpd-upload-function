@@ -2,6 +2,7 @@ package it.gov.pagopa.gpd.upload.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import it.gov.pagopa.gpd.upload.entity.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
 import lombok.SneakyThrows;
@@ -55,7 +56,7 @@ public class GpdClient {
         return RetryStep.RETRY;
     }
 
-    private int callCreateDebtPositions(String idPA, PaymentPositionsModel paymentPositions, Logger logger, String requestId) {
+    private ResponseGPD callCreateDebtPositions(String idPA, PaymentPositionsModel paymentPositions, Logger logger, String requestId) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.registerModule(new JavaTimeModule());
@@ -72,11 +73,17 @@ public class GpdClient {
             logger.log(Level.INFO, () -> String.format(
                     "[requestId=%s][createDebtPositions] Response: %s", requestId, response.readEntity(String.class)));
 
-            return response.getStatus();
+            return ResponseGPD.builder()
+                    .status(response.getStatus())
+                    .message(response.readEntity(String.class))
+                    .build();
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format(
                     "[requestId=%s][createDebtPositions] Exception: %s", requestId, e.getMessage()));
-            return -1;
+            return ResponseGPD.builder()
+                    .status(-1)
+                    .message(e.getMessage())
+                    .build();
         }
     }
 }

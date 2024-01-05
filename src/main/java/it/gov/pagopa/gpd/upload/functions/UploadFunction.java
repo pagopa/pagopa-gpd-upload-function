@@ -73,7 +73,7 @@ public class UploadFunction {
                                                     .current(0)
                                                     .total(paymentPositionsModel.getPaymentPositions().size())
                                                     .successIUPD(new ArrayList<>())
-                                                    .failedIUPD(new ArrayList<>())
+                                                    .failedIUPDs(new ArrayList<>())
                                                     .start(LocalDateTime.now()).build())
                                     .build();
         Status status = StatusRepository.getInstance(logger).createIfNotExist(key, fiscalCode, statusIfNotExist);
