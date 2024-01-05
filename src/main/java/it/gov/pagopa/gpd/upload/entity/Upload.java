@@ -5,6 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 
 @Builder(toBuilder = true)
 @Getter
@@ -20,4 +21,8 @@ public class Upload {
     private LocalDateTime start;
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
     private LocalDateTime end;
+
+    public void addFailures(FailedIUPD failedIUPD) {
+        this.failedIUPDs.add(failedIUPD);
+    }
 }

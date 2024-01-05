@@ -2,7 +2,7 @@ package it.gov.pagopa.gpd.upload.entity;
 
 import lombok.*;
 
-import java.util.ArrayList;
+import java.util.List;
 
 @Builder(toBuilder = true)
 @Getter
@@ -10,8 +10,7 @@ import java.util.ArrayList;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FailedIUPD {
-    private String IUPD;
     private int errorCode;
     private String details;
-    private ArrayList<String> skippedIUPDs;
+    private List<String> skippedIUPDs;
 }

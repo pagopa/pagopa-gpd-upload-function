@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import lombok.*;
 
@@ -10,7 +11,9 @@ import lombok.*;
 @AllArgsConstructor
 public class ResponseGPD {
     private RetryStep retryStep;
-    private String message;
+    @JsonProperty("detail")
+    private String detail;
+    @JsonProperty("status")
     private int status;
 
     public void setRetryStep(RetryStep retryStep) {

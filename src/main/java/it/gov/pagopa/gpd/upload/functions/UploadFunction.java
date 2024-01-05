@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
+import it.gov.pagopa.gpd.upload.entity.FailedIUPD;
 import it.gov.pagopa.gpd.upload.entity.ResponseGPD;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
@@ -102,7 +103,7 @@ public class UploadFunction {
             logger.log(Level.INFO,
                     "Process last block for payment positions from index " + index + ", remaining position: " + remainingPosition + ", total size: " + totalPosition);
             block = new PaymentPositionsModel(paymentPositionsModel.getPaymentPositions().subList(index, index+remainingPosition));
-            RetryStep response = GpdClient.getInstance().createDebtPositions(fiscalCode, block, logger, invocationId);
+            ResponseGPD response = GpdClient.getInstance().createDebtPositions(fiscalCode, block, logger, invocationId);
             List<String> IUPDs = block.getPaymentPositions().stream().map(pp -> pp.getIupd()).collect(Collectors.toList());
             this.updateStatus(IUPDs, status, response, remainingPosition);
             StatusRepository.getInstance(logger).upsertStatus(key, status);
@@ -123,12 +124,14 @@ public class UploadFunction {
             successIUPDs.addAll(IUPDs);
             status.upload.setSuccessIUPD(successIUPDs);
         } else if(responseRetryStep.equals(RetryStep.ERROR) || responseRetryStep.equals(RetryStep.RETRY) || responseRetryStep.equals(RetryStep.NONE)  ) {
-            ArrayList<String> skippedIUPDs = status.upload.getFailedIUPDs().getFailedIUPD();
-            failedIUPDs.addAll(IUPDs);
-            status.upload.setFailedIUPD(failedIUPDs);
+            FailedIUPD failedIUPD = FailedIUPD.builder()
+                    .details(response.getDetail().substring(0, 150))
+                    .errorCode(response.getStatus())
+                    .skippedIUPDs(IUPDs)
+                    .build();
+            status.upload.addFailures(failedIUPD);
         }
         status.upload.setCurrent(status.upload.getCurrent() + blockSize);
-
         return status;
     }
 }

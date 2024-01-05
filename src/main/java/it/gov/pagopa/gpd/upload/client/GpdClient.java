@@ -43,6 +43,9 @@ public class GpdClient {
         ResponseGPD responseGPD = callCreateDebtPositions(fiscalCode, paymentPositionModel, logger, requestId);
         int status = responseGPD.getStatus();
 
+        logger.log(Level.INFO, () -> String.format(
+                "[requestId=%s][createDebtPositions] Response message: %s", requestId, responseGPD.getDetail()));
+
         if (status >= 200 && status < 300) {
             responseGPD.setRetryStep(RetryStep.DONE);
         }
@@ -77,16 +80,13 @@ public class GpdClient {
             logger.log(Level.INFO, () -> String.format(
                     "[requestId=%s][createDebtPositions] Response: %s", requestId, response.readEntity(String.class)));
 
-            return ResponseGPD.builder()
-                    .status(response.getStatus())
-                    .message(response.readEntity(String.class).substring(0, 150))
-                    .build();
+            return objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format(
                     "[requestId=%s][createDebtPositions] Exception: %s", requestId, e.getMessage()));
             return ResponseGPD.builder()
                     .status(-1)
-                    .message(e.getMessage().substring(0, 150))
+                    .detail(e.getMessage().substring(0, 150))
                     .build();
         }
     }
