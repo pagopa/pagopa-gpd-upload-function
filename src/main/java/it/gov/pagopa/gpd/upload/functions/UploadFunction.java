@@ -30,6 +30,8 @@ public class UploadFunction {
 
     private final String BLOCK_SIZE = System.getenv("BLOCK_SIZE");
 
+    private final int MESSAGE_MAX_CHAR_NUMBER = 150;
+
     /**
      * This function will be invoked when a new or updated blob is detected at the
      * specified path. The blob contents are provided as input to this function.
@@ -125,7 +127,7 @@ public class UploadFunction {
             status.upload.setSuccessIUPD(successIUPDs);
         } else if(responseRetryStep.equals(RetryStep.ERROR) || responseRetryStep.equals(RetryStep.RETRY) || responseRetryStep.equals(RetryStep.NONE)  ) {
             FailedIUPD failedIUPD = FailedIUPD.builder()
-                    .details(response.getDetail().substring(0, Math.min(response.getDetail().length(), 150)))
+                    .details(response.getDetail().substring(0, Math.min(response.getDetail().length(), MESSAGE_MAX_CHAR_NUMBER)))
                     .errorCode(response.getStatus())
                     .skippedIUPDs(IUPDs)
                     .build();
