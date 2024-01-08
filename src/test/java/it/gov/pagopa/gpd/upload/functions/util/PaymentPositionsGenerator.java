@@ -63,7 +63,8 @@ public class PaymentPositionsGenerator {
         objectMapper.registerModule(javaTimeModule);
 
         String jsonPP = objectMapper.writeValueAsString(paymentPositions);
-        FileWriter fileWriter = new FileWriter("77777777777_11.json");
+        String extender = UUID.randomUUID().toString().substring(0, 4);
+        FileWriter fileWriter = new FileWriter("77777777777" + extender + ".json");
         fileWriter.write(jsonPP);
         fileWriter.close();
     }
