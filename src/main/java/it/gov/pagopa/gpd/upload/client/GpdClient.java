@@ -2,7 +2,7 @@ package it.gov.pagopa.gpd.upload.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import it.gov.pagopa.gpd.upload.entity.ResponseGPD;
+import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
 import lombok.SneakyThrows;
@@ -40,20 +40,26 @@ public class GpdClient {
         logger.log(Level.INFO, () -> String.format(
                 "[id=%s][requestId=%s][GPD CALL][createDebtPositions]", invocationId, requestId));
 
-        ResponseGPD responseGPD = callCreateDebtPositions(fiscalCode, paymentPositionModel, logger, requestId);
-        int status = responseGPD.getStatus();
+        ObjectMapper objectMapper = new ObjectMapper();
+        Response response = callCreateDebtPositions(fiscalCode, paymentPositionModel, logger, requestId);
+        int status = response.getStatus();
 
-        logger.log(Level.INFO, () -> String.format(
-                "[requestId=%s][createDebtPositions] Response message: %s", requestId, responseGPD.getDetail()));
+        ResponseGPD responseGPD;
 
         if (status >= 200 && status < 300) {
-            responseGPD.setRetryStep(RetryStep.DONE);
+            responseGPD = ResponseGPD.builder()
+                    .retryStep(RetryStep.DONE)
+                    .status(status)
+                    .detail("")
+                    .build();
         }
-        if (status >= 400 && status < 500) {
+        else if (status >= 400 && status < 500) {
             // skip retry if the status is 4xx
+            responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
             responseGPD.setRetryStep(RetryStep.ERROR);
         }
         else {
+            responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
             responseGPD.setRetryStep(RetryStep.RETRY);
         }
 
@@ -63,7 +69,7 @@ public class GpdClient {
         return responseGPD;
     }
 
-    private ResponseGPD callCreateDebtPositions(String idPA, PaymentPositionsModel paymentPositions, Logger logger, String requestId) {
+    public Response callCreateDebtPositions(String idPA, PaymentPositionsModel paymentPositions, Logger logger, String requestId) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.registerModule(new JavaTimeModule());
@@ -77,17 +83,12 @@ public class GpdClient {
 
             logger.log(Level.INFO, () -> String.format(
                     "[requestId=%s][createDebtPositions] Response: %s", requestId, response.getStatus()));
-            logger.log(Level.INFO, () -> String.format(
-                    "[requestId=%s][createDebtPositions] Response: %s", requestId, response.readEntity(String.class)));
 
-            return objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
+            return response;
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format(
                     "[requestId=%s][createDebtPositions] Exception: %s", requestId, e.getMessage()));
-            return ResponseGPD.builder()
-                    .status(-1)
-                    .detail(e.getMessage().substring(0, 150))
-                    .build();
+            return Response.serverError().build();
         }
     }
 }

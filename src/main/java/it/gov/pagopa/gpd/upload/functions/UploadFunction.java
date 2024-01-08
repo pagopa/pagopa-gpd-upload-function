@@ -6,7 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.*;
 import it.gov.pagopa.gpd.upload.entity.FailedIUPD;
-import it.gov.pagopa.gpd.upload.entity.ResponseGPD;
+import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.exception.AppException;
@@ -125,7 +125,7 @@ public class UploadFunction {
             status.upload.setSuccessIUPD(successIUPDs);
         } else if(responseRetryStep.equals(RetryStep.ERROR) || responseRetryStep.equals(RetryStep.RETRY) || responseRetryStep.equals(RetryStep.NONE)  ) {
             FailedIUPD failedIUPD = FailedIUPD.builder()
-                    .details(response.getDetail().substring(0, 150))
+                    .details(response.getDetail().substring(0, Math.min(response.getDetail().length(), 150)))
                     .errorCode(response.getStatus())
                     .skippedIUPDs(IUPDs)
                     .build();
