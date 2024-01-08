@@ -16,7 +16,7 @@ import java.util.*;
 
 public class PaymentPositionsGenerator {
     public static void main(String[] args) throws IOException {
-        int N = 10;
+        int N = 1; // debt position number target
         String fiscalCode = "77777777777";
         List<PaymentPositionModel> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
@@ -63,7 +63,7 @@ public class PaymentPositionsGenerator {
         objectMapper.registerModule(javaTimeModule);
 
         String jsonPP = objectMapper.writeValueAsString(paymentPositions);
-        FileWriter fileWriter = new FileWriter("77777777777_1291b9d816e942e89c329bce04d17c55.json");
+        FileWriter fileWriter = new FileWriter("77777777777_11.json");
         fileWriter.write(jsonPP);
         fileWriter.close();
     }
