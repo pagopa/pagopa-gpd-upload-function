@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.getMockDebtPositions;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
@@ -49,6 +50,20 @@ public class UploadFunctionTest {
         objectMapper.registerModule(new JavaTimeModule());
         String mockDebtPositions = objectMapper.writeValueAsString(getMockDebtPositions());
         doNothing().when(uploadFunction).createPaymentPositionBlocks(any(Logger.class), anyString(), anyString(), anyString(), any(PaymentPositionsModel.class));
+
+        //Function execution
+        uploadFunction.run(mockDebtPositions.getBytes(StandardCharsets.UTF_8), "testFiscalCode", "testFilename.json", context);
+    }
+
+    @Test
+    void runKo() throws Exception {
+        Logger logger = Logger.getLogger("gpd-upload-test-logger");
+        when(context.getLogger()).thenReturn(logger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        String mockDebtPositions = objectMapper.writeValueAsString(getMockDebtPositions());
+        doThrow(new Exception()).when(uploadFunction).createPaymentPositionBlocks(any(Logger.class), anyString(), anyString(), anyString(), any(PaymentPositionsModel.class));
 
         //Function execution
         uploadFunction.run(mockDebtPositions.getBytes(StandardCharsets.UTF_8), "testFiscalCode", "testFilename.json", context);
