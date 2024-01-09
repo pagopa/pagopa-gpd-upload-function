@@ -1,4 +1,4 @@
-package it.gov.pagopa.gpd.upload.functions.util;
+package it.gov.pagopa.gpd.upload.functions;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpRequestMessage;
