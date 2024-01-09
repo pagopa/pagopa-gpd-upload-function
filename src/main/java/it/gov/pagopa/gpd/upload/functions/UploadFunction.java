@@ -76,7 +76,7 @@ public class UploadFunction {
             logger.log(Level.INFO, () -> "Payment positions size: " + pps.getPaymentPositions().size());
             // function logic: validation and block upload to GPD-Core
             validate(logger, pps, status);
-            status = createPaymentPositionBlocks(logger, context.getInvocationId(), fiscalCode, key, pps, status);
+            createPaymentPositionBlocks(logger, context.getInvocationId(), fiscalCode, key, pps, status);
             // write status in output container
             outputBlob.setValue(objectMapper.writeValueAsString(status));
         } catch (JsonProcessingException | AppException e) {
@@ -87,7 +87,7 @@ public class UploadFunction {
     }
 
 
-    public Status createPaymentPositionBlocks(Logger logger, String invocationId, String fc, String key, PaymentPositionsModel pps, Status status) throws Exception {
+    public void createPaymentPositionBlocks(Logger logger, String invocationId, String fc, String key, PaymentPositionsModel pps, Status status) throws Exception {
         long t1 = System.currentTimeMillis();
 
         int blockSize = Integer.parseInt(BLOCK_SIZE);
@@ -122,8 +122,6 @@ public class UploadFunction {
 
         long uploadDuration = System.currentTimeMillis() - t1;
         logger.log(Level.INFO, "Elapsed upload blocks time: " + uploadDuration);
-
-        return status;
     }
 
     private void validate(Logger logger, PaymentPositionsModel paymentPositionsModel, Status status) {
