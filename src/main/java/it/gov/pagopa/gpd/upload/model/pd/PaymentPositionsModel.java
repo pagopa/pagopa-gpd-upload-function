@@ -1,11 +1,11 @@
 package it.gov.pagopa.gpd.upload.model.pd;
 
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import javax.validation.Valid;
 import java.util.List;
 
 @SuperBuilder(toBuilder = true)
