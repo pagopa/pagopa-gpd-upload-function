@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 
 import com.microsoft.azure.functions.OutputBinding;
+import it.gov.pagopa.gpd.upload.UploadFunction;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
 import org.junit.jupiter.api.Test;

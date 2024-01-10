@@ -4,6 +4,7 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpRequestMessage;
 import com.microsoft.azure.functions.HttpResponseMessage;
 import com.microsoft.azure.functions.HttpStatus;
+import it.gov.pagopa.gpd.upload.Info;
 import it.gov.pagopa.gpd.upload.model.AppInfo;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
