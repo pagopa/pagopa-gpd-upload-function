@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload.functions.util;
 
+import com.microsoft.azure.functions.OutputBinding;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOptionModel;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionModel;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
@@ -49,5 +50,19 @@ public class TestUtil {
                 .category("categoryXZ")
                 .iban("IT0000000000000000000000000")
                 .build();
+    }
+
+    public static OutputBinding<String> getMockOutputBinding() {
+        return new OutputBinding<String>() {
+            @Override
+            public String getValue() {
+                return null;
+            }
+
+            @Override
+            public void setValue(String value) {
+
+            }
+        };
     }
 }
