@@ -10,14 +10,14 @@ microservice-chart:
   livenessProbe:
     httpGet:
       path: /info
-      port: 80
+      port: 7071
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /info
-      port: 80
+      port: 7071
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
@@ -30,18 +30,18 @@ microservice-chart:
         targetPort: 12345
         path: /metrics
   ports:
-    - 80 #http
+    - 7071 #http
     - 12345 #jmx-exporter
   service:
     type: ClusterIP
     ports:
-      - 80 #http
+      - 7071 #http
       - 12345 #jmx-exporter
   ingress:
     create: true
     host: "weudev.gps.internal.dev.platform.pagopa.it"
     path: /pagopa-gpd-upload-function/(.*)
-    servicePort: 80
+    servicePort: 7071
   serviceAccount:
     create: false
     annotations: {}
