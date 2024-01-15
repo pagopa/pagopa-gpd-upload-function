@@ -24,16 +24,17 @@ public class Info {
 	 * @return
 	 */
 	@FunctionName("Info")
-	public HttpResponseMessage run(
-			@HttpTrigger(
-					name = "InfoTrigger",
+	public HttpResponseMessage run (
+			@HttpTrigger(name = "InfoTrigger",
 					methods = {HttpMethod.GET},
 					route = "info",
-					authLevel = AuthorizationLevel.ANONYMOUS)
-			HttpRequestMessage<Optional<String>> request,
+					authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage<Optional<String>> request,
 			final ExecutionContext context) {
 
-		return request.createResponseBuilder(HttpStatus.OK).build();
+		return request.createResponseBuilder(HttpStatus.OK)
+					   .header("Content-Type", "application/json")
+					   .body(getInfo(context.getLogger(), "/maven-archiver/pom.properties"))
+					   .build();
 	}
 
 	public synchronized AppInfo getInfo(Logger logger, String path) {
