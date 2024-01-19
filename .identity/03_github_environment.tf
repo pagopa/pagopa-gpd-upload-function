@@ -21,7 +21,9 @@ resource "github_repository_environment" "github_repository_environment" {
 
 locals {
   env_secrets = {
-    "CLIENT_ID" : module.identity_cd.identity_client_id,
+    "CD_CLIENT_ID" : data.azurerm_user_assigned_identity.identity_cd.client_id,
+    # <placeholder>
+    # "CT_CLIENT_ID" : data.azurerm_user_assigned_identity.identity_ct.client_id,
     "TENANT_ID" : data.azurerm_client_config.current.tenant_id,
     "SUBSCRIPTION_ID" : data.azurerm_subscription.current.subscription_id,
     "SUBKEY" : data.azurerm_key_vault_secret.key_vault_integration_test_subkey.value,
