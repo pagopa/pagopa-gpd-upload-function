@@ -18,6 +18,8 @@
         <functionAppName>com.microsoft.azure-20220215182005862</functionAppName>
         <resteasy.version>3.15.3.Final</resteasy.version>
         <lombok.version>1.18.24</lombok.version>
+        <azure.cosmos.version>4.54.0</azure.cosmos.version>
+        <azure.storage.blob.version>12.25.1</azure.storage.blob.version>
     </properties>
 
     <dependencies>
@@ -136,11 +138,19 @@
             <version>1.18.20</version>
             <scope>provided</scope>
         </dependency>
+        <!-- storage -->
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-cosmos</artifactId>
-            <version>4.53.1</version>
+            <version>${azure.cosmos.version}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.azure/azure-storage-blob -->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-storage-blob</artifactId>
+            <version>${azure.storage.blob.version}</version>
+        </dependency>
+
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>

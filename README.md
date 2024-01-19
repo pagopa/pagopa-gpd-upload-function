@@ -21,6 +21,10 @@ There is an example of a Http Trigger function.
 
 `mvn azure-functions:run`
 
+sequential maven command skipping test
+
+`mvn -f pom.xml clean package -Dmaven.test.skip=true && mvn -e azure-functions:run`
+
 ### Test
 `curl http://localhost:7071/example` 
 

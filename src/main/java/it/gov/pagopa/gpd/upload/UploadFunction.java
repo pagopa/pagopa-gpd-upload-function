@@ -38,17 +38,17 @@ public class UploadFunction {
      * This function will be invoked when a new or updated blob is detected at the
      * specified path. The blob contents are provided as input to this function.
      */
-    @FunctionName("blobprocessor")
+    @FunctionName("upload-blob-processor")
     public void run(
             @BlobTrigger(name = "file",
                     dataType = "binary",
-                    path = "gpd-upload/input/{fiscalCode}/{name}",
+                    path = "broker/{organizationFiscalCode}/input/{filename}",
                     connection = "GPD_SA_CONNECTION_STRING") byte[] content,
-            @BindingName("fiscalCode") String fiscalCode,
-            @BindingName("name") String filename,
+            @BindingName("organizationFiscalCode") String organizationFiscalCode,
+            @BindingName("filename") String filename,
             @BlobOutput(
                     name = "target",
-                    path = "gpd-upload/output/{fiscalCode}/result_{name}",
+                    path = "broker/output/{organizationFiscalCode}/result_{filename}",
                     connection = "GPD_SA_CONNECTION_STRING")
             OutputBinding<String> outputBlob,
             final ExecutionContext context
@@ -56,7 +56,7 @@ public class UploadFunction {
         Logger logger = context.getLogger();
         logger.log(Level.INFO, () -> "Blob Trigger function executed at: " + LocalDateTime.now() + " for blob"
                                              + ", filename " + filename
-                                             + ", fiscal code: " + fiscalCode
+                                             + ", fiscal code: " + organizationFiscalCode
                                              + ", size : " + content.length + " bytes");
 
         String converted = new String(content, StandardCharsets.UTF_8);
@@ -67,11 +67,11 @@ public class UploadFunction {
         try {
             // deserialize payment positions from JSON to Object
             PaymentPositionsModel pps = objectMapper.readValue(converted, PaymentPositionsModel.class);
-            Status status = StatusService.getInstance(logger).createStatus(fiscalCode, key, pps);
+            Status status = StatusService.getInstance(logger).createStatus(organizationFiscalCode, key, pps);
             logger.log(Level.INFO, () -> "Payment positions size: " + pps.getPaymentPositions().size());
             // function logic: validation and block upload to GPD-Core
             validate(logger, pps, status);
-            createPaymentPositionBlocks(logger, context.getInvocationId(), fiscalCode, key, pps, status);
+            createPaymentPositionBlocks(logger, context.getInvocationId(), organizationFiscalCode, key, pps, status);
             // write status in output container
             outputBlob.setValue(objectMapper.writeValueAsString(status));
         } catch (Exception e) {
