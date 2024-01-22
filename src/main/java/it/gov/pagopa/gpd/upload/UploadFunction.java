@@ -51,7 +51,7 @@ public class UploadFunction {
             @BindingName("filename") String filename,
             @BlobOutput(
                     name = "target",
-                    path = "broker/{organizationFiscalCode}/output/result_{filename}",
+                    path = "broker/{organizationFiscalCode}/output/report_{filename}",
                     connection = "GPD_SA_CONNECTION_STRING")
             OutputBinding<String> outputBlob,
             final ExecutionContext context
