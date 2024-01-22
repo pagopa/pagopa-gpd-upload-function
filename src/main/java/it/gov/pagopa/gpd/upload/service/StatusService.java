@@ -37,7 +37,7 @@ public class StatusService {
                                           .upload(Upload.builder()
                                                           .current(0)
                                                           .total(paymentPositionsModel.getPaymentPositions().size())
-                                                          .responseEntries(new ArrayList<>())
+                                                          .responses(new ArrayList<>())
                                                           .start(LocalDateTime.now()).build())
                                           .build();
         Status status = StatusRepository.getInstance(logger).createIfNotExist(key, fiscalCode, statusIfNotExist);
