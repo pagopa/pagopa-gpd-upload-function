@@ -14,21 +14,21 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class GpdClient {
+public class GPDClient {
 
     static final String HEADER_REQUEST_ID = "X-Request-Id";
     static final String HEADER_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
     static final String GPD_DEBT_POSITIONS_PATH = "/organizations/%s/debtpositions";
-    private static GpdClient instance = null;
+    private static GPDClient instance = null;
     final String GPD_HOST = System.getenv("GPD_HOST");
     public final String GPD_SUBSCRIPTION_KEY = System.getenv("GPD_SUBSCRIPTION_KEY");
 
-    private GpdClient() {
+    private GPDClient() {
     }
 
-    public static GpdClient getInstance() {
+    public static GPDClient getInstance() {
         if (instance == null) {
-            instance = new GpdClient();
+            instance = new GPDClient();
         }
         return instance;
     }

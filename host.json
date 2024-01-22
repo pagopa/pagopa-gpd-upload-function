@@ -14,7 +14,7 @@
     "logLevel": {
       "default": "Error",
       "Host.Results": "Error",
-      "Function": "Error",
+      "Function": "Information",
       "Host.Aggregator": "Error"
     },
     "applicationInsights": {

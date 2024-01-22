@@ -15,16 +15,23 @@ There is an example of a Http Trigger function.
 ### Test
 `curl http://localhost:8999/example`
 
-## Run locally with Maven
+## Run locally with Maven and Azurite
 
-`mvn clean package`
+Use the [Azurite](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite?tabs=visual-studio%2Cblob-storage) emulator for local Azure Storage development
 
-`mvn azure-functions:run`
+```
+docker run -p 10000:10000 -p 10001:10001 -p 10002:10002 \
+mcr.microsoft.com/azure-storage/azurite
+```
+#### Maven
+```
+mvn clean package
+mvn azure-functions:run
+```
 
-sequential maven command skipping test
-
-`mvn -f pom.xml clean package -Dmaven.test.skip=true && mvn -e azure-functions:run`
-
+```
+mvn -f pom.xml clean package -Dmaven.test.skip=true && mvn -e azure-functions:run
+```
 ### Test
 `curl http://localhost:7071/example` 
 

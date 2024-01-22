@@ -9,6 +9,7 @@ import lombok.*;
 @AllArgsConstructor
 public class Status {
     public String id;
+    public String brokerID;
     public String fiscalCode;
     public Upload upload;
 }
