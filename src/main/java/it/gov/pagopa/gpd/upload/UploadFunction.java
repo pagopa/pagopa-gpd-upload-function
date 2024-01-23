@@ -79,7 +79,7 @@ public class UploadFunction {
             // write status in output container
             outputBlob.setValue(objectMapper.writeValueAsString(status));
         } catch (Exception e) {
-            logger.log(Level.INFO, () -> "Processing function exception: " + e);
+            logger.log(Level.INFO, () -> "Processing function exception: " + e.getMessage() + ", caused by: " + e.getCause());
         }
     }
 
@@ -140,7 +140,6 @@ public class UploadFunction {
                                                       .statusMessage(details)
                                                       .requestIDs(List.of(pp.getIupd()))
                                                       .build();
-                logger.log(Level.INFO, () -> "call add response");
                 status.upload.addResponse(responseEntry);
                 invalidPosition++;
                 iterator.remove();
