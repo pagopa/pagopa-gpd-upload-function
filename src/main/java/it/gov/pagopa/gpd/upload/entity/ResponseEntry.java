@@ -9,8 +9,8 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class FailedIUPD {
-    private int errorCode;
-    private String details;
-    private List<String> skippedIUPDs;
+public class ResponseEntry {
+    public Integer statusCode;
+    public String statusMessage;
+    public List<String> requestIDs; // IUPDs
 }

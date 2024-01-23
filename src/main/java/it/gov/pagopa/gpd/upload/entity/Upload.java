@@ -15,14 +15,23 @@ import java.util.List;
 public class Upload {
     private int current;
     private int total;
-    private ArrayList<String> successIUPD;
-    private ArrayList<FailedIUPD> failedIUPDs;
+    private ArrayList<ResponseEntry> responses;
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
     private LocalDateTime start;
     @JsonFormat(pattern="yyyy-MM-dd HH:mm:ss")
     private LocalDateTime end;
 
-    public void addFailures(FailedIUPD failedIUPD) {
-        this.failedIUPDs.add(failedIUPD);
+    public void addResponse(ResponseEntry responseEntry) {
+        for (ResponseEntry existingEntry : responses) {
+            if (existingEntry.statusCode.equals(responseEntry.statusCode)
+                        && existingEntry.statusMessage.equals(responseEntry.statusMessage)) {
+                List<String> requestIDs = new ArrayList<>(existingEntry.requestIDs);
+                requestIDs.addAll(responseEntry.requestIDs);
+                existingEntry.requestIDs = requestIDs;
+                return; // No need to continue checking once a match is found
+            }
+        }
+        // If no match is found, add the new response entry to the list
+        responses.add(responseEntry);
     }
 }

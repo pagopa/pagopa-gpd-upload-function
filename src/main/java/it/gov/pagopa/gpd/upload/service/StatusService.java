@@ -1,11 +1,10 @@
 package it.gov.pagopa.gpd.upload.service;
 
-import it.gov.pagopa.gpd.upload.entity.FailedIUPD;
+import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
-import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
 import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 
@@ -38,8 +37,7 @@ public class StatusService {
                                           .upload(Upload.builder()
                                                           .current(0)
                                                           .total(paymentPositionsModel.getPaymentPositions().size())
-                                                          .successIUPD(new ArrayList<>())
-                                                          .failedIUPDs(new ArrayList<>())
+                                                          .responses(new ArrayList<>())
                                                           .start(LocalDateTime.now()).build())
                                           .build();
         Status status = StatusRepository.getInstance(logger).createIfNotExist(key, fiscalCode, statusIfNotExist);
@@ -51,21 +49,20 @@ public class StatusService {
         return status;
     }
 
-    public Status updateStatus(List<String> IUPDs, Status status, ResponseGPD response, int blockSize) {
-        RetryStep responseRetryStep = response.getRetryStep();
-        if(responseRetryStep.equals(RetryStep.DONE)) {
-            ArrayList<String> successIUPDs = status.upload.getSuccessIUPD();
-            successIUPDs.addAll(IUPDs);
-            status.upload.setSuccessIUPD(successIUPDs);
-        } else if(responseRetryStep.equals(RetryStep.ERROR) || responseRetryStep.equals(RetryStep.RETRY) || responseRetryStep.equals(RetryStep.NONE)  ) {
-            FailedIUPD failedIUPD = FailedIUPD.builder()
-                                            .details(response.getDetail().substring(0, Math.min(response.getDetail().length(), MESSAGE_MAX_CHAR_NUMBER)))
-                                            .errorCode(response.getStatus())
-                                            .skippedIUPDs(IUPDs)
-                                            .build();
-            status.upload.addFailures(failedIUPD);
+    public Status updateStatus(Status status, List<String> IUPDs, ResponseGPD response) throws AppException {
+        ResponseEntry responseEntry = ResponseEntry.builder()
+                                              .statusCode(response.getStatus())
+                                              .statusMessage(response.getDetail())
+                                              .requestIDs(IUPDs)
+                                              .build();
+        status.upload.addResponse(responseEntry);
+        status.upload.setCurrent(status.upload.getCurrent() + IUPDs.size());
+
+        try {
+            StatusRepository.getInstance(logger).upsertStatus(status.id, status);
+        } catch (AppException e) {
+            throw new AppException("Error while update upload Status");
         }
-        status.upload.setCurrent(status.upload.getCurrent() + blockSize);
 
         return status;
     }

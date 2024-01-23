@@ -1,6 +1,7 @@
 package it.gov.pagopa.gpd.upload.functions.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOptionModel;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionModel;
@@ -16,7 +17,7 @@ import java.util.*;
 
 public class PaymentPositionsGenerator {
     public static void main(String[] args) throws IOException {
-        int N = 1; // debt position number target
+        int N = 10; // debt position number target
         String fiscalCode = "77777777777";
         List<PaymentPositionModel> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
@@ -24,7 +25,7 @@ public class PaymentPositionsGenerator {
             TransferModel tf = TransferModel.builder()
                                        .idTransfer("1")
                                        .amount(100L)
-                                       .remittanceInformation("remittance information")
+                                       .remittanceInformation(UUID.randomUUID().toString().substring(0, 10))
                                        .category("categoryXZ")
                                        .iban("IT0000000000000000000000000")
                                        .transferMetadata(new ArrayList<>())
@@ -46,8 +47,9 @@ public class PaymentPositionsGenerator {
                                               .iupd("IUPD_" + ID)
                                               .type(Type.F)
                                               .fiscalCode(fiscalCode)
-                                              .fullName("Mario Rossi")
-                                              .companyName("Company Name")
+                                              .email("email")
+                                              .fullName(UUID.randomUUID().toString().substring(0, 4))
+                                              .companyName(UUID.randomUUID().toString().substring(0, 4))
                                               .paymentOption(paymentOptionList)
                                               .switchToExpired(false)
                                               .build();
@@ -60,6 +62,7 @@ public class PaymentPositionsGenerator {
 
         ObjectMapper objectMapper = new ObjectMapper();
         JavaTimeModule javaTimeModule = new JavaTimeModule();
+        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(javaTimeModule);
 
         String jsonPP = objectMapper.writeValueAsString(paymentPositions);
