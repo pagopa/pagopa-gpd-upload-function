@@ -35,7 +35,6 @@ import java.util.stream.Collectors;
 public class UploadFunction {
 
     private final String BLOCK_SIZE = System.getenv("BLOCK_SIZE");
-    private final int BAD_REQUEST = 400;
 
     /**
      * This function will be invoked when a new or updated blob is detected at the
@@ -76,10 +75,12 @@ public class UploadFunction {
             // function logic: validation and block upload to GPD-Core
             validate(logger, pps, status);
             createPaymentPositionBlocks(logger, context.getInvocationId(), organizationFiscalCode, key, pps, status);
-            // write status in output container
+            // write report in output container
             outputBlob.setValue(objectMapper.writeValueAsString(status));
         } catch (Exception e) {
             logger.log(Level.INFO, () -> "Processing function exception: " + e.getMessage() + ", caused by: " + e.getCause());
+            // describe exception in blob processing in output container
+            outputBlob.setValue("The input file cannot be processed due to an exception.");
         }
     }
 
@@ -87,6 +88,7 @@ public class UploadFunction {
     public void createPaymentPositionBlocks(Logger logger, String invocationId, String fc, String key, PaymentPositionsModel pps, Status status) throws Exception {
         long t1 = System.currentTimeMillis();
         StatusService statusService = StatusService.getInstance(logger);
+        GPDClient gpdClient = GPDClient.getInstance();
 
         int blockSize = Integer.parseInt(BLOCK_SIZE);
         int index = 0;
@@ -96,9 +98,19 @@ public class UploadFunction {
             logger.log(Level.INFO,
                     "Process block for payment positions from index " + index + ", block size: " + blockSize + ", total size: " + totalPosition);
             block = new PaymentPositionsModel(pps.getPaymentPositions().subList(index, index+blockSize));
-            ResponseGPD response = GPDClient.getInstance().createDebtPositions(fc, block, logger, invocationId);
-            List<String> IUPDs = block.getPaymentPositions().stream().map(item -> item.getIupd()).collect(Collectors.toList());
-            statusService.updateStatus(status, IUPDs, response);
+            ResponseGPD response = gpdClient.createBulkDebtPositions(fc, block, logger, invocationId);
+
+            if(response.getStatus() != HttpStatus.CREATED.value()) {
+                // if BULK creation wasn't successful, switch to single debt position creation
+                for(PaymentPositionModel pp : block.getPaymentPositions()) {
+                    response = gpdClient.createDebtPosition(fc, pp, logger, invocationId);
+                    statusService.updateStatus(status, List.of(pp.getIupd()), response);
+                }
+            } else {
+                // if BULK creation was successful
+                List<String> IUPDs = block.getPaymentPositions().stream().map(pp -> pp.getIupd()).collect(Collectors.toList());
+                statusService.updateStatus(status, IUPDs, response);
+            }
             index += blockSize;
         }
         // process last block if remaining position size is greater than zero
@@ -107,9 +119,20 @@ public class UploadFunction {
             logger.log(Level.INFO,
                     "Process last block for payment positions from index " + index + ", remaining position: " + remainingPosition + ", total size: " + totalPosition);
             block = new PaymentPositionsModel(pps.getPaymentPositions().subList(index, index+remainingPosition));
-            ResponseGPD response = GPDClient.getInstance().createDebtPositions(fc, block, logger, invocationId);
-            List<String> IUPDs = block.getPaymentPositions().stream().map(pp -> pp.getIupd()).collect(Collectors.toList());
-            statusService.updateStatus(status, IUPDs, response);
+            ResponseGPD response = GPDClient.getInstance().createBulkDebtPositions(fc, block, logger, invocationId);
+
+            if(response.getStatus() != HttpStatus.CREATED.value()) {
+                // if BULK creation wasn't successful, switch to single debt position creation
+                for(PaymentPositionModel pp : block.getPaymentPositions()) {
+                    response = gpdClient.createDebtPosition(fc, pp, logger, invocationId);
+                    statusService.updateStatus(status, List.of(pp.getIupd()), response);
+                }
+            } else {
+                // if BULK creation was successful
+                List<String> IUPDs = block.getPaymentPositions().stream().map(pp -> pp.getIupd()).collect(Collectors.toList());
+                statusService.updateStatus(status, IUPDs, response);
+            }
+            index += remainingPosition;
         }
         if(status.upload.getCurrent() == status.upload.getTotal()) {
             status.upload.setEnd(LocalDateTime.now());
@@ -147,8 +170,6 @@ public class UploadFunction {
                 for(ConstraintViolation<PaymentPositionModel> v : violations) {
                     logger.log(Level.INFO, "Payment position " + pp.getIupd() + " is not valid, violation: " + v.getMessage());
                 }
-            } else {
-                logger.log(Level.INFO, "Payment position list is valid");
             }
         }
 

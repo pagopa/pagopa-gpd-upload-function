@@ -45,23 +45,6 @@ variable "prefix" {
   }
 }
 
-variable "cd_github_federations" {
-  type = list(object({
-    repository        = string
-    credentials_scope = optional(string, "environment")
-    subject           = string
-  }))
-  description = "GitHub Organization, repository name and scope permissions"
-}
-
-variable "environment_cd_roles" {
-  type = object({
-    subscription    = list(string)
-    resource_groups = map(list(string))
-  })
-  description = "GitHub Continous Delivery roles"
-}
-
 variable "github_repository_environment" {
   type = object({
     protected_branches     = bool

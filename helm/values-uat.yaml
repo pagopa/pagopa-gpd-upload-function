@@ -80,10 +80,10 @@ microservice-chart:
   envConfig:
     WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
     FUNCTIONS_WORKER_RUNTIME: "java"
-    GPD_HOST: "https://api.uat.platform.pagopa.it/gpd/api/v2"
+    GPD_HOST: "https://api.uat.platform.pagopa.it/gpd/api"
     RETRY_MAX_ATTEMPTS: "1"
     RETRY_MAX_DELAY: "10000"
-    BLOCK_SIZE: "1"
+    BLOCK_SIZE: "10"
     COSMOS_URI: "https://pagopa-u-weu-gps-cosmos-account.documents.azure.com:443/"
     GPD_DB_NAME: "gpd_db"
     GPD_CONTAINER_NAME: "gpd_upload_status"
