@@ -11,7 +11,57 @@
   ],
   "paths": {
     "/upload": {
+      "get": {
+        "tags": [
+          "Massive Upload Processor"
+        ],
+        "summary": "Blob Created Event",
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error response",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
       "post": {
+        "tags": [
+          "Massive Upload Processor"
+        ],
+        "summary": "Blob Created Event",
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error response",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      },
+      "put": {
         "tags": [
           "Massive Upload Processor"
         ],
