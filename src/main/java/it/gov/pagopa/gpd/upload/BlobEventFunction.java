@@ -1,16 +1,17 @@
 package it.gov.pagopa.gpd.upload;
 
 import com.azure.core.util.BinaryData;
-import com.azure.messaging.eventgrid.EventGridEvent;
-import com.azure.messaging.eventgrid.systemevents.SubscriptionValidationEventData;
 import com.microsoft.azure.functions.*;
 import com.microsoft.azure.functions.annotation.AuthorizationLevel;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.HttpTrigger;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class BlobEventFunction {
 
@@ -22,22 +23,45 @@ public class BlobEventFunction {
                     authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage request,
             final ExecutionContext context) {
         BinaryData events = BinaryData.fromString(String.valueOf(request.getBody()));
+
         Logger logger = context.getLogger();
         logger.log(Level.INFO, () -> "Request body: " + request.getBody());
-        logger.log(Level.INFO, () -> "Events: " + events);
+        Map<String, Object> eventsDictionary = convertStringToDictionary(String.valueOf(events));
+        logger.log(Level.INFO, () -> "Events: " + eventsDictionary);
 
-        List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events.toString());
+        HttpResponseMessage httpResponseMessage =  request.createResponseBuilder(HttpStatus.OK)
+                       .body(eventsDictionary.get("validationCode"))
+                       .build();
+        logger.log(Level.INFO, () -> "Response: " + httpResponseMessage);
 
-        for (EventGridEvent eventGridEvent : eventGridEvents) {
-            if(eventGridEvent.getEventType().equals("SubscriptionValidationEventData")){
-                SubscriptionValidationEventData s = SubscriptionValidationEventData.class.cast(eventGridEvent);
-                return request.createResponseBuilder(HttpStatus.OK)
-                               .header("Content-Type", "application/json")
-                               .body(s.getValidationCode())
-                               .build();
+        return httpResponseMessage;
+    }
+
+    private static Map<String, Object> convertStringToDictionary(String inputString) {
+        Map<String, Object> dictionary = new HashMap<>();
+
+        // Extract key-value pairs using regex
+        Pattern pattern = Pattern.compile("(\\w+)=([^,}]+)");
+        Matcher matcher = pattern.matcher(inputString);
+
+        while (matcher.find()) {
+            String key = matcher.group(1);
+            String value = matcher.group(2).trim();
+
+            // If the value is an object, convert it to a nested dictionary
+            if (value.startsWith("{") && value.endsWith("}")) {
+                value = value.substring(1, value.length() - 1);
+                Map<String, Object> nestedDictionary = convertStringToDictionary(value);
+                dictionary.put(key, nestedDictionary);
+            } else if (key.equals("data")) {
+                // Handle special case for the 'data' field
+                Map<String, Object> nestedData = convertStringToDictionary(value);
+                dictionary.putAll(nestedData);
+            } else {
+                dictionary.put(key, value);
             }
         }
-        return request.createResponseBuilder(HttpStatus.NOT_FOUND)
-                       .build();
+
+        return dictionary;
     }
 }
