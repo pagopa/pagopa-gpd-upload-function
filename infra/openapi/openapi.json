@@ -1,0 +1,41 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Massive Upload - GPD",
+    "version": "0.0.7"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:7071"
+    }
+  ],
+  "paths": {
+    "/upload": {
+      "post": {
+        "tags": [
+          "Massive Upload Processor"
+        ],
+        "summary": "Blob Created Event",
+        "parameters": [
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error response",
+            "content": {
+              "application/json": {}
+            }
+          }
+        }
+      }
+    }
+  }
+}
