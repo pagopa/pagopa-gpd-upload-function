@@ -30,7 +30,7 @@ public class BlobEventFunction {
         logger.log(Level.INFO, () -> "Events: " + eventsDictionary);
 
         HttpResponseMessage httpResponseMessage =  request.createResponseBuilder(HttpStatus.OK)
-                       .body(eventsDictionary.get("validationCode"))
+                       .body("ValidationResponse="+eventsDictionary.get("validationCode"))
                        .build();
         logger.log(Level.INFO, () -> "Response: " + httpResponseMessage);
 
