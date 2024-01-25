@@ -17,7 +17,7 @@ public class BlobEventFunction {
     @FunctionName("BlobCreatedSubscriber")
     public HttpResponseMessage run (
             @HttpTrigger(name = "BlobCreatedSubscriber",
-                    methods = {HttpMethod.POST, HttpMethod.GET},
+                    methods = {HttpMethod.POST, HttpMethod.GET, HttpMethod.PUT},
                     route = "upload",
                     authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage request,
             final ExecutionContext context) {
