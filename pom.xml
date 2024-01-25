@@ -34,6 +34,13 @@
             <artifactId>azure-functions-java-library</artifactId>
             <version>${azure.functions.java.library.version}</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.azure/azure-messaging-eventgrid -->
+        <dependency>
+            <groupId>com.azure</groupId>
+            <artifactId>azure-messaging-eventgrid</artifactId>
+            <version>4.20.1</version>
+        </dependency>
+
 
         <!-- End Azure -->
 
