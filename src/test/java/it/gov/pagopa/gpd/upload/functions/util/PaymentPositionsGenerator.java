@@ -17,7 +17,7 @@ import java.util.*;
 
 public class PaymentPositionsGenerator {
     public static void main(String[] args) throws IOException {
-        int N = 10; // debt position number target
+        int N = 9; // debt position number target
         String fiscalCode = "77777777777";
         List<PaymentPositionModel> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
@@ -47,7 +47,7 @@ public class PaymentPositionsGenerator {
                                               .iupd("IUPD_" + ID)
                                               .type(Type.F)
                                               .fiscalCode(fiscalCode)
-                                              .email("email")
+                                              //.email("email")
                                               .fullName(UUID.randomUUID().toString().substring(0, 4))
                                               .companyName(UUID.randomUUID().toString().substring(0, 4))
                                               .paymentOption(paymentOptionList)
