@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa.gpd.upload</groupId>
     <artifactId>gpd-upload-function</artifactId>
-    <version>0.0.7-8-PAGOPA-1446-eventgrid</version>
+    <version>0.0.7-9-PAGOPA-1446-eventgrid</version>
     <packaging>jar</packaging>
 
     <name>GPD-Upload-Function</name>
