@@ -20,19 +20,26 @@ public class BlobEventFunction {
             @HttpTrigger(name = "BlobCreatedSubscriber",
                     methods = {HttpMethod.POST, HttpMethod.GET, HttpMethod.PUT},
                     route = "upload",
-                    authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage request,
+                    authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage<String> request,
             final ExecutionContext context) {
-        BinaryData events = BinaryData.fromString(String.valueOf(request.getBody()));
-
         Logger logger = context.getLogger();
+
         logger.log(Level.INFO, () -> "Request body: " + request.getBody());
+        BinaryData events = BinaryData.fromString(String.valueOf(request.getBody()));
+        logger.log(Level.INFO, () -> "Request body: " + events.toString());
         Map<String, Object> eventsDictionary = convertStringToDictionary(String.valueOf(events));
         logger.log(Level.INFO, () -> "Events: " + eventsDictionary);
 
-        HttpResponseMessage httpResponseMessage =  request.createResponseBuilder(HttpStatus.OK)
-                       .body("{\"validationResponse\":"+eventsDictionary.get("validationCode") + "}")
-                       .build();
-        logger.log(Level.INFO, () -> "Response: " + httpResponseMessage);
+        HttpResponseMessage httpResponseMessage;
+        if(eventsDictionary.get("eventType").equals("Microsoft.EventGrid.SubscriptionValidationEvent")) {
+            httpResponseMessage =  request.createResponseBuilder(HttpStatus.OK)
+                                                               .body("{\"validationResponse\":"+eventsDictionary.get("validationCode") + "}")
+                                                               .build();
+            logger.log(Level.INFO, () -> "Response: " + httpResponseMessage.getBody());
+        } else {
+            httpResponseMessage =  request.createResponseBuilder(HttpStatus.OK)
+                                                               .build();
+        }
 
         return httpResponseMessage;
     }
