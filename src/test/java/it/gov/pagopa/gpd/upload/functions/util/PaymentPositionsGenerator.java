@@ -21,7 +21,7 @@ import java.util.*;
 public class PaymentPositionsGenerator {
     public static void main(String[] args) throws IOException {
         int N = 1000; // debt position number target
-        String fiscalCode = "77_UPLOAD";
+        String fiscalCode = "77777777777";
         List<PaymentPosition> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
             String ID = fiscalCode + "_" + UUID.randomUUID().toString().substring(0,5);

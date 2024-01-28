@@ -60,6 +60,10 @@ public class BlobEventFunction {
                     logger.log(Level.INFO, () -> "File size too large");
                     return request.createResponseBuilder(HttpStatus.OK).build(); // skip request
                 }
+                if(blobData.getContentLength() == 0) {
+                    logger.log(Level.INFO, () -> "File size equal to zero");
+                    return request.createResponseBuilder(HttpStatus.OK).build(); // skip request
+                }
 
                 logger.log(Level.INFO, () -> "Subject: " + event.getSubject());
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/(\\w+\\.json)");
