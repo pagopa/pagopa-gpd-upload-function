@@ -5,6 +5,7 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.BlobStorageException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.logging.Level;
@@ -39,20 +40,24 @@ public class BlobStorageRepository {
     }
 
     public void uploadOutput(Logger logger, String data, String broker, String fiscalCode, String filename) {
-        blobServiceClient = new BlobServiceClientBuilder()
-                                    .connectionString(connectionString)
-                                    .buildClient();
-        blobServiceClient.createBlobContainerIfNotExists(broker);
-        BlobContainerClient container = blobServiceClient.getBlobContainerClient(broker);
+        try {
+            blobServiceClient = new BlobServiceClientBuilder()
+                                        .connectionString(connectionString)
+                                        .buildClient();
+            blobServiceClient.createBlobContainerIfNotExists(broker);
+            BlobContainerClient container = blobServiceClient.getBlobContainerClient(broker);
 
-        if(!container.exists())
-            logger.log(Level.INFO, () -> "container doesn't exist");
+            if (!container.exists())
+                logger.log(Level.INFO, () -> "container doesn't exist");
 
-        String blobName = "/" + fiscalCode + "/" + OUTPUT_DIRECTORY + "/" + filename;
-        BlobClient blobClient = container.getBlobClient(blobName);
-        if(!blobClient.exists())
-            logger.log(Level.INFO, () -> "blob doesn't exist");
+            String blobName = "/" + fiscalCode + "/" + OUTPUT_DIRECTORY + "/" + filename;
+            BlobClient blobClient = container.getBlobClient(blobName);
+            if (!blobClient.exists())
+                logger.log(Level.INFO, () -> "blob doesn't exist");
 
-        blobClient.upload(BinaryData.fromString(data));
+            blobClient.upload(BinaryData.fromString(data));
+        } catch (BlobStorageException e) {
+            logger.log(Level.INFO, () -> "BlobStorageException " + e.getMessage());
+        }
     }
 }
