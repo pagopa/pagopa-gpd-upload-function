@@ -19,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class TransferModel implements Serializable {
+public class Transfer implements Serializable {
 
     /**
      * generated serialVersionUID
@@ -48,13 +48,13 @@ public class TransferModel implements Serializable {
     
     @Valid
     @Size(min=0, max=10)
-    private List<TransferMetadataModel> transferMetadata = new ArrayList<>();
+    private List<TransferMetadata> transferMetadata = new ArrayList<>();
 
-    public void addTransferMetadata(TransferMetadataModel trans) {
+    public void addTransferMetadata(TransferMetadata trans) {
     	transferMetadata.add(trans);
     }
 
-    public void removeTransferMetadata(TransferMetadataModel trans) {
+    public void removeTransferMetadata(TransferMetadata trans) {
     	transferMetadata.remove(trans);
     }
 

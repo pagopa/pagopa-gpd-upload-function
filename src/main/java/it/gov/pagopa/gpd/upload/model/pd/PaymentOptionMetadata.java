@@ -14,7 +14,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class PaymentOptionMetadataModel implements Serializable {
+public class PaymentOptionMetadata implements Serializable {
 
     /**
 	 * generated serialVersionUID

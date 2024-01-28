@@ -12,11 +12,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class PaymentPositionsModel {
+public class PaymentPositions {
     @Valid
-    private List<@Valid PaymentPositionModel> paymentPositions;
+    private List<@Valid PaymentPosition> paymentPositions;
 
-    public @Valid List<@Valid PaymentPositionModel> getPaymentPositions() {
+    public @Valid List<@Valid PaymentPosition> getPaymentPositions() {
         return this.paymentPositions;
     }
 }

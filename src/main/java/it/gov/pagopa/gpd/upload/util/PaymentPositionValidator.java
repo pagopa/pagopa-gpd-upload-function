@@ -4,8 +4,8 @@ import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionModel;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -19,19 +19,19 @@ import java.util.logging.Logger;
 
 public class PaymentPositionValidator {
 
-    public static void validate(Logger logger, PaymentPositionsModel paymentPositionsModel, Status status) throws AppException {
+    public static void validate(Logger logger, PaymentPositions paymentPositions, Status status) throws AppException {
         ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
-        Set<ConstraintViolation<PaymentPositionModel>> violations;
+        Set<ConstraintViolation<PaymentPosition>> violations;
         int invalidPosition = 0;
 
-        Iterator<PaymentPositionModel> iterator = paymentPositionsModel.getPaymentPositions().iterator();
+        Iterator<PaymentPosition> iterator = paymentPositions.getPaymentPositions().iterator();
         while (iterator.hasNext()) {
-            PaymentPositionModel pp = iterator.next();
+            PaymentPosition pp = iterator.next();
             violations =  validator.validate(pp);
 
             if (!violations.isEmpty()) {
-                ConstraintViolation<PaymentPositionModel> violation = violations.stream().findFirst().orElse(null);
+                ConstraintViolation<PaymentPosition> violation = violations.stream().findFirst().orElse(null);
                 String details = (violation != null ? violation.getMessage() : "");
 
                 ResponseEntry responseEntry = ResponseEntry.builder()
@@ -43,7 +43,7 @@ public class PaymentPositionValidator {
                 invalidPosition++;
                 iterator.remove();
 
-                for(ConstraintViolation<PaymentPositionModel> v : violations) {
+                for(ConstraintViolation<PaymentPosition> v : violations) {
                     logger.log(Level.INFO, "Payment position " + pp.getIupd() + " is not valid, violation: " + v.getMessage());
                 }
             }

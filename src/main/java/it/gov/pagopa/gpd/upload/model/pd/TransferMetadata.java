@@ -14,7 +14,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class TransferMetadataModel implements Serializable {
+public class TransferMetadata implements Serializable {
 
     
     /**

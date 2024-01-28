@@ -5,7 +5,7 @@ import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 
 import java.time.LocalDateTime;
@@ -30,14 +30,14 @@ public class StatusService {
         this.logger = logger;
     }
 
-    public Status createStatus(String broker, String fiscalCode, String key, PaymentPositionsModel paymentPositionsModel) throws AppException {
+    public Status createStatus(String broker, String fiscalCode, String key, PaymentPositions paymentPositions) throws AppException {
         Status statusIfNotExist = Status.builder()
                                           .id(key)
                                           .brokerID(broker)
                                           .fiscalCode(fiscalCode)
                                           .upload(Upload.builder()
                                                           .current(0)
-                                                          .total(paymentPositionsModel.getPaymentPositions().size())
+                                                          .total(paymentPositions.getPaymentPositions().size())
                                                           .responses(new ArrayList<>())
                                                           .start(LocalDateTime.now()).build())
                                           .build();

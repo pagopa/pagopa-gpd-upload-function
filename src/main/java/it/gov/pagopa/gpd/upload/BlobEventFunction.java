@@ -13,7 +13,7 @@ import com.microsoft.azure.functions.annotation.AuthorizationLevel;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.HttpTrigger;
 import it.gov.pagopa.gpd.upload.entity.Status;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.BlobStorageRepository;
 import it.gov.pagopa.gpd.upload.service.BlockService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
@@ -96,7 +96,7 @@ public class BlobEventFunction {
 
         try {
             // deserialize payment positions from JSON to Object
-            PaymentPositionsModel pps = objectMapper.readValue(converted, PaymentPositionsModel.class);
+            PaymentPositions pps = objectMapper.readValue(converted, PaymentPositions.class);
             Status status = StatusService.getInstance(logger).createStatus(broker, fc, key, pps);
             if (status.getUpload().getEnd() != null) { // already exist no-retry
                 return;

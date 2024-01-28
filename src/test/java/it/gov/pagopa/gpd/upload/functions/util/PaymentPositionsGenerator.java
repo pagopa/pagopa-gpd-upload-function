@@ -3,13 +3,15 @@ package it.gov.pagopa.gpd.upload.functions.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentOptionModel;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionModel;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
-import it.gov.pagopa.gpd.upload.model.pd.TransferModel;
+import it.gov.pagopa.gpd.upload.entity.Status;
+import it.gov.pagopa.gpd.upload.entity.Upload;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
+import it.gov.pagopa.gpd.upload.model.pd.Transfer;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.Type;
+import it.gov.pagopa.gpd.upload.util.MapUtils;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
@@ -19,10 +21,10 @@ public class PaymentPositionsGenerator {
     public static void main(String[] args) throws IOException {
         int N = 9; // debt position number target
         String fiscalCode = "77_UPLOAD";
-        List<PaymentPositionModel> paymentPositionList = new ArrayList<>();
+        List<PaymentPosition> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
             String ID = fiscalCode + "_" + UUID.randomUUID().toString().substring(0,5);
-            TransferModel tf = TransferModel.builder()
+            Transfer tf = Transfer.builder()
                                        .idTransfer("1")
                                        .amount(100L)
                                        .remittanceInformation(UUID.randomUUID().toString().substring(0, 10))
@@ -30,10 +32,10 @@ public class PaymentPositionsGenerator {
                                        .iban("IT0000000000000000000000000")
                                        .transferMetadata(new ArrayList<>())
                                        .build();
-            List<TransferModel> transferList = new ArrayList<TransferModel>();
+            List<Transfer> transferList = new ArrayList<Transfer>();
             transferList.add(tf);
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.now().plus(1, ChronoUnit.DAYS), ZoneId.of("UTC"));
-            PaymentOptionModel po = PaymentOptionModel.builder()
+            PaymentOption po = PaymentOption.builder()
                                             .iuv("IUV_UPLOAD_" + ID)
                                             .amount(100L)
                                             .isPartialPayment(false)
@@ -41,9 +43,9 @@ public class PaymentPositionsGenerator {
                                             .transfer(transferList)
                                             .paymentOptionMetadata(new ArrayList<>())
                                             .build();
-            List<PaymentOptionModel> paymentOptionList = new ArrayList<PaymentOptionModel>();
+            List<PaymentOption> paymentOptionList = new ArrayList<PaymentOption>();
             paymentOptionList.add(po);
-            PaymentPositionModel pp = PaymentPositionModel.builder()
+            PaymentPosition pp = PaymentPosition.builder()
                                               .iupd("IUPD_UPLOAD_" + ID)
                                               .type(Type.F)
                                               .fiscalCode(fiscalCode)
@@ -56,7 +58,7 @@ public class PaymentPositionsGenerator {
             paymentPositionList.add(pp);
         }
 
-        PaymentPositionsModel paymentPositions = PaymentPositionsModel.builder()
+        PaymentPositions paymentPositions = PaymentPositions.builder()
                                                          .paymentPositions(paymentPositionList)
                                                          .build();
 
@@ -65,10 +67,26 @@ public class PaymentPositionsGenerator {
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(javaTimeModule);
 
-        String jsonPP = objectMapper.writeValueAsString(paymentPositions);
-        String extender = UUID.randomUUID().toString().substring(0, 4);
-        FileWriter fileWriter = new FileWriter("77777777777" + extender + ".json");
-        fileWriter.write(jsonPP);
-        fileWriter.close();
+//        String jsonPP = objectMapper.writeValueAsString(paymentPositions);
+//        String extender = UUID.randomUUID().toString().substring(0, 4);
+//        FileWriter fileWriter = new FileWriter("77777777777" + extender + ".json");
+//        fileWriter.write(jsonPP);
+//        fileWriter.close();
+
+        Upload upload = Upload.builder()
+                                .current(0)
+                                .total(0)
+                                .start(LocalDateTime.now())
+                                .end(LocalDateTime.now())
+                                .responses(null)
+                                .build();
+        Status status = Status.builder()
+                                .id("id")
+                                .brokerID("id")
+                                .fiscalCode("fc")
+                                .upload(upload)
+                                .build();
+        String jsonUploadReport = objectMapper.writeValueAsString(MapUtils.convert(status));
+        System.out.println(jsonUploadReport);
     }
 }
