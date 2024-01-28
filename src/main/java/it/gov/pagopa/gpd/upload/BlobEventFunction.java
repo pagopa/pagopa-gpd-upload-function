@@ -18,6 +18,7 @@ import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
 import it.gov.pagopa.gpd.upload.repository.BlobStorageRepository;
 import it.gov.pagopa.gpd.upload.service.BlockService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
+import it.gov.pagopa.gpd.upload.util.MapUtils;
 import it.gov.pagopa.gpd.upload.util.PaymentPositionValidator;
 
 import java.util.*;
@@ -98,13 +99,13 @@ public class BlobEventFunction {
         try {
             // deserialize payment positions from JSON to Object
             PaymentPositionsModel pps = objectMapper.readValue(converted, PaymentPositionsModel.class);
-            Status status = StatusService.getInstance(logger).createStatus(fc, key, pps);
+            Status status = StatusService.getInstance(logger).createStatus(broker, fc, key, pps);
             logger.log(Level.INFO, () -> "Payment positions size: " + pps.getPaymentPositions().size());
             // function logic: validation and block upload to GPD-Core
             PaymentPositionValidator.validate(logger, pps, status);
             new BlockService().createPaymentPositionBlocks(logger, context.getInvocationId(), fc, key, pps, status);
             // write report in output container
-            new BlobStorageRepository().uploadOutput(logger, objectMapper.writeValueAsString(status), broker,
+            new BlobStorageRepository().uploadOutput(logger, objectMapper.writeValueAsString(MapUtils.convert(status)), broker,
                     fc, "report_" + filename);
         } catch (Exception e) {
             logger.log(Level.INFO, () -> "Processing function exception: " + e.getMessage() + ", caused by: " + e.getCause());

@@ -30,9 +30,10 @@ public class StatusService {
         this.logger = logger;
     }
 
-    public Status createStatus(String fiscalCode, String key, PaymentPositionsModel paymentPositionsModel) throws AppException {
+    public Status createStatus(String broker, String fiscalCode, String key, PaymentPositionsModel paymentPositionsModel) throws AppException {
         Status statusIfNotExist = Status.builder()
                                           .id(key)
+                                          .brokerID(broker)
                                           .fiscalCode(fiscalCode)
                                           .upload(Upload.builder()
                                                           .current(0)
