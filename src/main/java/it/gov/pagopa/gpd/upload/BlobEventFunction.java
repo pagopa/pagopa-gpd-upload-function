@@ -5,7 +5,6 @@ import com.azure.core.util.BinaryData;
 import com.azure.messaging.eventgrid.EventGridEvent;
 import com.azure.messaging.eventgrid.systemevents.StorageBlobCreatedEventData;
 import com.azure.messaging.eventgrid.systemevents.SubscriptionValidationEventData;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -34,7 +33,7 @@ public class BlobEventFunction {
                     methods = {HttpMethod.POST, HttpMethod.GET, HttpMethod.PUT},
                     route = "upload",
                     authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage<String> request,
-            final ExecutionContext context) throws JsonProcessingException {
+            final ExecutionContext context) {
         Logger logger = context.getLogger();
 
         logger.log(Level.INFO, () -> "Request body: " + request.getBody());
@@ -54,7 +53,7 @@ public class BlobEventFunction {
                                                .body("{\"validationResponse\":"+validationData.getValidationCode() + "}")
                                                .build();
             } else if(event.getEventType().equals("Microsoft.Storage.BlobCreated")){
-                logger.log(Level.INFO, () -> "Microsoft.Storage.BlobCreated: " + event);
+                logger.log(Level.INFO, () -> "Microsoft.Storage.BlobCreated");
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
                 if(blobData.getContentLength() > 1e+8) { // if file greater than 100 MB
@@ -76,7 +75,6 @@ public class BlobEventFunction {
                                                     + "\n filename: " + filename);
 
                     BinaryData content = new BlobStorageRepository().download(logger, brokerContainer, fiscalCode, filename);
-                    logger.log(Level.INFO, () -> "content: " + content.toString());
                     this.processBlob(context, logger, brokerContainer, fiscalCode, filename, content.toString());
                 } else {
                     logger.log(Level.INFO, () -> "No match found in the input string.");
@@ -100,6 +98,9 @@ public class BlobEventFunction {
             // deserialize payment positions from JSON to Object
             PaymentPositionsModel pps = objectMapper.readValue(converted, PaymentPositionsModel.class);
             Status status = StatusService.getInstance(logger).createStatus(broker, fc, key, pps);
+            if (status.getUpload().getEnd() != null) { // already exist no-retry
+                return;
+            }
             logger.log(Level.INFO, () -> "Payment positions size: " + pps.getPaymentPositions().size());
             // function logic: validation and block upload to GPD-Core
             PaymentPositionValidator.validate(logger, pps, status);
