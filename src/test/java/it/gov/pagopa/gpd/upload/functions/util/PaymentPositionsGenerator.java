@@ -18,7 +18,7 @@ import java.util.*;
 public class PaymentPositionsGenerator {
     public static void main(String[] args) throws IOException {
         int N = 9; // debt position number target
-        String fiscalCode = "77777777777";
+        String fiscalCode = "77_UPLOAD";
         List<PaymentPositionModel> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
             String ID = fiscalCode + "_" + UUID.randomUUID().toString().substring(0,5);
@@ -34,7 +34,7 @@ public class PaymentPositionsGenerator {
             transferList.add(tf);
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.now().plus(1, ChronoUnit.DAYS), ZoneId.of("UTC"));
             PaymentOptionModel po = PaymentOptionModel.builder()
-                                            .iuv("IUV_" + ID)
+                                            .iuv("IUV_UPLOAD_" + ID)
                                             .amount(100L)
                                             .isPartialPayment(false)
                                             .dueDate(zonedDateTime.toLocalDateTime())
@@ -44,7 +44,7 @@ public class PaymentPositionsGenerator {
             List<PaymentOptionModel> paymentOptionList = new ArrayList<PaymentOptionModel>();
             paymentOptionList.add(po);
             PaymentPositionModel pp = PaymentPositionModel.builder()
-                                              .iupd("IUPD_" + ID)
+                                              .iupd("IUPD_UPLOAD_" + ID)
                                               .type(Type.F)
                                               .fiscalCode(fiscalCode)
                                               //.email("email")
