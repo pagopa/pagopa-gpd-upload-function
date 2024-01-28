@@ -52,9 +52,6 @@ public class BlobStorageRepository {
 
             String blobName = "/" + fiscalCode + "/" + OUTPUT_DIRECTORY + "/" + filename;
             BlobClient blobClient = container.getBlobClient(blobName);
-            if (!blobClient.exists())
-                logger.log(Level.INFO, () -> "blob doesn't exist");
-
             blobClient.upload(BinaryData.fromString(data));
         } catch (BlobStorageException e) {
             logger.log(Level.INFO, () -> "BlobStorageException " + e.getMessage());

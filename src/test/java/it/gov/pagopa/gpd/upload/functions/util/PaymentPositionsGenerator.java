@@ -12,6 +12,7 @@ import it.gov.pagopa.gpd.upload.model.pd.Transfer;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.Type;
 import it.gov.pagopa.gpd.upload.util.MapUtils;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
@@ -19,7 +20,7 @@ import java.util.*;
 
 public class PaymentPositionsGenerator {
     public static void main(String[] args) throws IOException {
-        int N = 9; // debt position number target
+        int N = 1000; // debt position number target
         String fiscalCode = "77_UPLOAD";
         List<PaymentPosition> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
@@ -67,26 +68,26 @@ public class PaymentPositionsGenerator {
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(javaTimeModule);
 
-//        String jsonPP = objectMapper.writeValueAsString(paymentPositions);
-//        String extender = UUID.randomUUID().toString().substring(0, 4);
-//        FileWriter fileWriter = new FileWriter("77777777777" + extender + ".json");
-//        fileWriter.write(jsonPP);
-//        fileWriter.close();
+        String jsonPP = objectMapper.writeValueAsString(paymentPositions);
+        String extender = UUID.randomUUID().toString().substring(0, 4);
+        FileWriter fileWriter = new FileWriter("77777777777" + extender + ".json");
+        fileWriter.write(jsonPP);
+        fileWriter.close();
 
-        Upload upload = Upload.builder()
-                                .current(0)
-                                .total(0)
-                                .start(LocalDateTime.now())
-                                .end(LocalDateTime.now())
-                                .responses(null)
-                                .build();
-        Status status = Status.builder()
-                                .id("id")
-                                .brokerID("id")
-                                .fiscalCode("fc")
-                                .upload(upload)
-                                .build();
-        String jsonUploadReport = objectMapper.writeValueAsString(MapUtils.convert(status));
-        System.out.println(jsonUploadReport);
+//        Upload upload = Upload.builder()
+//                                .current(0)
+//                                .total(0)
+//                                .start(LocalDateTime.now())
+//                                .end(LocalDateTime.now())
+//                                .responses(null)
+//                                .build();
+//        Status status = Status.builder()
+//                                .id("id")
+//                                .brokerID("id")
+//                                .fiscalCode("fc")
+//                                .upload(upload)
+//                                .build();
+//        String jsonUploadReport = objectMapper.writeValueAsString(MapUtils.convert(status));
+//        System.out.println(jsonUploadReport);
     }
 }
