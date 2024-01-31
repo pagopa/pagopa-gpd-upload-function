@@ -39,7 +39,7 @@ public class BlobEventFunction {
         logger.log(Level.INFO, () -> "Request body: " + request.getBody());
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(request.getBody());
 
-        if(eventGridEvents == null) {
+        if(eventGridEvents == null || eventGridEvents.isEmpty()) {
             return request.createResponseBuilder(HttpStatus.NOT_FOUND).build();
         }
 
