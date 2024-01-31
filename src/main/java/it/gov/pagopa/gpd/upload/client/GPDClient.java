@@ -4,8 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionModel;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import lombok.SneakyThrows;
 
 import javax.ws.rs.client.ClientBuilder;
@@ -36,7 +36,7 @@ public class GPDClient {
     }
 
     @SneakyThrows
-    public ResponseGPD createBulkDebtPositions(String fiscalCode, PaymentPositionsModel paymentPositionModel, Logger logger, String invocationId) {
+    public ResponseGPD createBulkDebtPositions(String fiscalCode, PaymentPositions paymentPositionModel, Logger logger, String invocationId) {
         String requestId = UUID.randomUUID().toString();
 
         logger.log(Level.INFO, () -> String.format(
@@ -75,7 +75,7 @@ public class GPDClient {
     }
 
     @SneakyThrows
-    public ResponseGPD createDebtPosition(String fiscalCode, PaymentPositionModel paymentPosition, Logger logger, String invocationId) {
+    public ResponseGPD createDebtPosition(String fiscalCode, PaymentPosition paymentPosition, Logger logger, String invocationId) {
         String requestId = UUID.randomUUID().toString();
 
         logger.log(Level.INFO, () -> String.format(

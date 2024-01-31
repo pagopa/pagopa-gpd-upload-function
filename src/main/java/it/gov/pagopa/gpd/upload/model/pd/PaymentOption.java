@@ -24,7 +24,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class PaymentOptionModel implements Serializable {
+public class PaymentOption implements Serializable {
 
     /**
      * generated serialVersionUID
@@ -50,25 +50,25 @@ public class PaymentOptionModel implements Serializable {
     private long notificationFee;
 
     @Valid
-    private List<TransferModel> transfer = new ArrayList<>();
+    private List<Transfer> transfer = new ArrayList<>();
 
     @Valid
     @Size(min=0, max=10)
-    private List<PaymentOptionMetadataModel> paymentOptionMetadata = new ArrayList<>();
+    private List<PaymentOptionMetadata> paymentOptionMetadata = new ArrayList<>();
 
-    public void addTransfers(TransferModel trans) {
+    public void addTransfers(Transfer trans) {
         transfer.add(trans);
     }
 
-    public void removeTransfers(TransferModel trans) {
+    public void removeTransfers(Transfer trans) {
         transfer.remove(trans);
     }
 
-    public void addPaymentOptionMetadata(PaymentOptionMetadataModel paymentOptMetadata) {
+    public void addPaymentOptionMetadata(PaymentOptionMetadata paymentOptMetadata) {
         paymentOptionMetadata.add(paymentOptMetadata);
     }
 
-    public void removePaymentOptionMetadata(PaymentOptionMetadataModel paymentOptMetadata) {
+    public void removePaymentOptionMetadata(PaymentOptionMetadata paymentOptMetadata) {
         paymentOptionMetadata.remove(paymentOptMetadata);
     }
 }

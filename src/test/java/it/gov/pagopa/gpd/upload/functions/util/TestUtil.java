@@ -1,10 +1,10 @@
 package it.gov.pagopa.gpd.upload.functions.util;
 
 import com.microsoft.azure.functions.OutputBinding;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentOptionModel;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionModel;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionsModel;
-import it.gov.pagopa.gpd.upload.model.pd.TransferModel;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
+import it.gov.pagopa.gpd.upload.model.pd.Transfer;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.Type;
 import lombok.experimental.UtilityClass;
 
@@ -14,14 +14,14 @@ import java.util.List;
 @UtilityClass
 public class TestUtil {
 
-    public static PaymentPositionsModel getMockDebtPositions() {
-        return PaymentPositionsModel.builder()
+    public static PaymentPositions getMockDebtPositions() {
+        return PaymentPositions.builder()
                 .paymentPositions(List.of(getMockDebtPosition()))
                 .build();
     }
 
-    public static PaymentPositionModel getMockDebtPosition() {
-        return PaymentPositionModel.builder()
+    public static PaymentPosition getMockDebtPosition() {
+        return PaymentPosition.builder()
                 .iupd("IUPD_77777777777_92bd6")
                 .type(Type.F)
                 .fiscalCode("77777777777")
@@ -30,8 +30,8 @@ public class TestUtil {
                 .build();
     }
 
-    public static PaymentOptionModel getMockPaymentOption() {
-        return PaymentOptionModel.builder()
+    public static PaymentOption getMockPaymentOption() {
+        return PaymentOption.builder()
                 .iuv("IUV_77777777777_92bd6")
                 .amount(100L)
                 .isPartialPayment(false)
@@ -42,8 +42,8 @@ public class TestUtil {
                 .build();
     }
 
-    public static TransferModel getMockTransfer() {
-        return TransferModel.builder()
+    public static Transfer getMockTransfer() {
+        return Transfer.builder()
                 .idTransfer("1")
                 .amount(100L)
                 .remittanceInformation("remittanceInformation")

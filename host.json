@@ -15,11 +15,14 @@
       "default": "Error",
       "Host.Results": "Error",
       "Function": "Information",
-      "Host.Aggregator": "Error"
+      "Host.Aggregator": "Error",
+      "Host": "Error"
     },
     "applicationInsights": {
       "samplingSettings": {
-        "isEnabled": false
+        "isEnabled": true,
+        "maxTelemetryItemsPerSecond": 1,
+        "excludedTypes": "Exception"
       }
     }
   }

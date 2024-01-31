@@ -38,6 +38,6 @@ bin/
 obj/
 
 # Environment
-**/.env
+**/**.env
 /helm/Chart.lock
 **/.terraform/

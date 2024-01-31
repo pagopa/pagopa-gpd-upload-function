@@ -25,7 +25,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class PaymentPositionModel implements Serializable {
+public class PaymentPosition implements Serializable {
 
     /**
      * generated serialVersionUID
@@ -66,13 +66,13 @@ public class PaymentPositionModel implements Serializable {
     private DebtPositionStatus status;
 
     @Valid
-    private List<PaymentOptionModel> paymentOption = new ArrayList<>();
+    private List<PaymentOption> paymentOption = new ArrayList<>();
 
-    public void addPaymentOptions(PaymentOptionModel paymentOpt) {
+    public void addPaymentOptions(PaymentOption paymentOpt) {
         paymentOption.add(paymentOpt);
     }
 
-    public void removePaymentOptions(PaymentOptionModel paymentOpt) {
+    public void removePaymentOptions(PaymentOption paymentOpt) {
         paymentOption.remove(paymentOpt);
     }
 }
