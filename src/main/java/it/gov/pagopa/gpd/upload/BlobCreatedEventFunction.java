@@ -4,14 +4,12 @@ import com.azure.core.implementation.serializer.DefaultJsonSerializer;
 import com.azure.core.util.BinaryData;
 import com.azure.messaging.eventgrid.EventGridEvent;
 import com.azure.messaging.eventgrid.systemevents.StorageBlobCreatedEventData;
-import com.azure.messaging.eventgrid.systemevents.SubscriptionValidationEventData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.microsoft.azure.functions.*;
-import com.microsoft.azure.functions.annotation.AuthorizationLevel;
+import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
-import com.microsoft.azure.functions.annotation.HttpTrigger;
+import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.BlobStorageRepository;
@@ -20,49 +18,40 @@ import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.MapUtils;
 import it.gov.pagopa.gpd.upload.util.PaymentPositionValidator;
 
-import java.util.*;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class BlobEventFunction {
-    @FunctionName("BlobCreatedSubscriber")
-    public HttpResponseMessage run (
-            @HttpTrigger(name = "BlobCreatedSubscriber",
-                    methods = {HttpMethod.POST, HttpMethod.GET, HttpMethod.PUT},
-                    route = "upload",
-                    authLevel = AuthorizationLevel.ANONYMOUS) HttpRequestMessage<String> request,
+public class BlobCreatedEventFunction {
+
+    @FunctionName("BlobQueueEventFunction")
+    public void run(
+            @QueueTrigger(name = "BlobCreatedEventTrigger", queueName = "%BLOB_EVENTS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String events,
             final ExecutionContext context) {
         Logger logger = context.getLogger();
+        logger.log(Level.INFO, () -> "Event: " + events);
 
-        logger.log(Level.INFO, () -> "Request body: " + request.getBody());
-        List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(request.getBody());
+        List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
 
-        if(eventGridEvents == null) {
-            return request.createResponseBuilder(HttpStatus.NOT_FOUND).build();
+        if (eventGridEvents.isEmpty()) {
+            logger.log(Level.INFO, () -> "EventGrid List is empty");
+            return; // skip event
         }
 
         for (EventGridEvent event : eventGridEvents) {
-            if(event.getEventType().equals("Microsoft.EventGrid.SubscriptionValidationEvent")) {
-                logger.log(Level.INFO, () -> "Microsoft.EventGrid.SubscriptionValidationEvent: " + event);
-                SubscriptionValidationEventData validationData =
-                        event.getData().toObject(SubscriptionValidationEventData.class, new DefaultJsonSerializer());
-
-                return request.createResponseBuilder(HttpStatus.OK)
-                                               .body("{\"validationResponse\":"+validationData.getValidationCode() + "}")
-                                               .build();
-            } else if(event.getEventType().equals("Microsoft.Storage.BlobCreated")){
+            if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
                 logger.log(Level.INFO, () -> "Microsoft.Storage.BlobCreated");
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
-                if(blobData.getContentLength() > 1e+8) { // if file greater than 100 MB
+                if (blobData.getContentLength() > 1e+8) { // if file greater than 100 MB
                     logger.log(Level.INFO, () -> "File size too large");
-                    return request.createResponseBuilder(HttpStatus.OK).build(); // skip request
+                    return; // skip event
                 }
-                if(blobData.getContentLength() == 0) {
+                if (blobData.getContentLength() == 0) {
                     logger.log(Level.INFO, () -> "File size equal to zero");
-                    return request.createResponseBuilder(HttpStatus.OK).build(); // skip request
+                    return; // skip event
                 }
 
                 logger.log(Level.INFO, () -> "Subject: " + event.getSubject());
@@ -71,28 +60,23 @@ public class BlobEventFunction {
 
                 // Check if the pattern is found
                 if (matcher.find()) {
-                    String brokerContainer = matcher.group(1);    // broker container as broker_{broke_code}
+                    String brokerContainer = matcher.group(1);    // broker container as broke_code
                     String fiscalCode = matcher.group(2);   // creditor institution directory
                     String filename = matcher.group(3);     // e.g. 77777777777c8a1.json
                     logger.log(Level.INFO, () -> "brokerContainer: " + brokerContainer
-                                                    + "\n fiscalCode: " + fiscalCode
-                                                    + "\n filename: " + filename);
+                                                         + "\n fiscalCode: " + fiscalCode
+                                                         + "\n filename: " + filename);
 
                     BinaryData content = new BlobStorageRepository().download(logger, brokerContainer, fiscalCode, filename);
                     this.processBlob(context, logger, brokerContainer, fiscalCode, filename, content.toString());
                 } else {
                     logger.log(Level.INFO, () -> "No match found in the input string.");
                 }
-
-                return request.createResponseBuilder(HttpStatus.OK)
-                               .build();
             }
         }
-
-        return request.createResponseBuilder(HttpStatus.OK).build();
     }
 
-    public void processBlob(final ExecutionContext context, Logger logger, String broker, String fc, String filename, String converted) {
+   public void processBlob(final ExecutionContext context, Logger logger, String broker, String fc, String filename, String converted) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(new JavaTimeModule());
