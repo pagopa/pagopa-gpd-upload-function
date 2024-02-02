@@ -103,6 +103,7 @@ public class ValidationFunction {
             // call payment position object validation logic
             PaymentPositionValidator.validate(invocationId, logger, paymentPositions, fiscalCode, uploadKey);
 
+            // create queue message
             List<PaymentPosition> list = paymentPositions.getPaymentPositions();
             for (int i = 0; i < list.size(); i += CHUNK_SIZE) {
                 int endIndex = Math.min(i + CHUNK_SIZE, list.size());
