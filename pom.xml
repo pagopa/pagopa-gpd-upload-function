@@ -40,8 +40,11 @@
             <artifactId>azure-messaging-eventgrid</artifactId>
             <version>4.20.1</version>
         </dependency>
-
-
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>azure-storage</artifactId>
+            <version>8.6.6</version>
+        </dependency>
         <!-- End Azure -->
 
         <!-- Test -->
@@ -132,11 +135,25 @@
         </dependency>
         <!-- storage END -->
 
+        <!-- validation START -->
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
             <version>3.0.2</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.hibernate/hibernate-validator -->
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>8.0.1.Final</version>
+        </dependency>
+        <!-- https://github.com/hibernate/hibernate-validator -->
+        <dependency>
+            <groupId>org.glassfish.expressly</groupId>
+            <artifactId>expressly</artifactId>
+            <version>5.0.0</version>
+        </dependency>
+        <!-- validation END -->
 
     </dependencies>
 

@@ -7,6 +7,13 @@
   "extensions": {
     "http": {
       "routePrefix": ""
+    },
+    "queues": {
+      "maxPollingInterval": 3000,
+      "visibilityTimeout" : "00:00:59",
+      "batchSize": 4,
+      "maxDequeueCount": 1,
+      "newBatchThreshold": 0
     }
   },
   "logging": {

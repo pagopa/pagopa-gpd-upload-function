@@ -70,7 +70,8 @@ public class PaymentPositionsGenerator {
 
         String jsonPP = objectMapper.writeValueAsString(paymentPositions);
         String extender = UUID.randomUUID().toString().substring(0, 4);
-        FileWriter fileWriter = new FileWriter("77777777777" + extender + ".json");
+        String filename = "77777777777" + extender + ".json";
+        FileWriter fileWriter = new FileWriter(filename);
         fileWriter.write(jsonPP);
         fileWriter.close();
 
