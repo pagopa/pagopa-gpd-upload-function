@@ -56,6 +56,8 @@ public class ServiceFunction {
                 StatusService.getInstance(logger).updateStatusEndTime(invocationId, status.fiscalCode, status.id, LocalDateTime.now());
                 report(invocationId, logger, msg.uploadKey, msg.brokerCode, msg.organizationFiscalCode);
             }
+
+            Runtime.getRuntime().gc();
         } catch (Exception e) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
         }

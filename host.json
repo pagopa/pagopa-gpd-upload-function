@@ -9,11 +9,11 @@
       "routePrefix": ""
     },
     "queues": {
-      "maxPollingInterval": 2000,
+      "maxPollingInterval": 1000,
       "visibilityTimeout" : "00:00:00",
       "batchSize": 4,
       "maxDequeueCount": 1,
-      "newBatchThreshold": 0
+      "newBatchThreshold": 2
     }
   },
   "logging": {

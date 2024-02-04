@@ -82,6 +82,8 @@ public class ValidationFunction {
                     BinaryData content = BlobRepository.getInstance(logger).download(broker, fiscalCode, filename);
                     String key = filename.substring(0, filename.indexOf("."));
                     this.validateBlob(context.getInvocationId(), logger, broker, fiscalCode, key, content);
+
+                    Runtime.getRuntime().gc();
                 } else {
                     logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", context.getInvocationId()));
                 }
