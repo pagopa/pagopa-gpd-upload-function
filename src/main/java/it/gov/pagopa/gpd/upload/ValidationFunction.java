@@ -124,6 +124,7 @@ public class ValidationFunction {
 
             return true;
         } catch (JsonMappingException e) {
+            // todo: in this case is a BAD_REQUEST -> update status
             logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
             return false;
         } catch (AppException | JsonProcessingException e) {
