@@ -12,14 +12,16 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <azure.functions.maven.plugin.version>1.26.0</azure.functions.maven.plugin.version>
         <azure.functions.java.library.version>3.0.0</azure.functions.java.library.version>
         <functionAppName>com.microsoft.azure-20220215182005862</functionAppName>
         <resteasy.version>3.15.3.Final</resteasy.version>
         <lombok.version>1.18.24</lombok.version>
+        <azure.eventgrid.version>4.20.1</azure.eventgrid.version>
         <azure.cosmos.version>4.54.0</azure.cosmos.version>
         <azure.storage.blob.version>12.25.1</azure.storage.blob.version>
+        <azure.storage.version>8.6.6</azure.storage.version>
     </properties>
 
     <dependencies>
@@ -38,12 +40,12 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-messaging-eventgrid</artifactId>
-            <version>4.20.1</version>
+            <version>${azure.eventgrid.version}</version>
         </dependency>
         <dependency>
             <groupId>com.microsoft.azure</groupId>
             <artifactId>azure-storage</artifactId>
-            <version>8.6.6</version>
+            <version>${azure.storage.version}</version>
         </dependency>
         <!-- End Azure -->
 
@@ -51,7 +53,7 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.8.2</version>
+            <version>5.10.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>

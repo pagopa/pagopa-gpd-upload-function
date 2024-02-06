@@ -28,8 +28,9 @@
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
-        "maxTelemetryItemsPerSecond": 1,
-        "excludedTypes": "Exception"
+        "maxTelemetryItemsPerSecond": 5,
+        "includedTypes": "PageView;Trace;Dependency;Request",
+        "excludedTypes": "Exception;Event;CustomEvent"
       }
     }
   }
