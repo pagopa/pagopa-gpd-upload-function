@@ -41,7 +41,7 @@ public class PaymentOption implements Serializable {
     @NotNull(message = "is partial payment is required")
     private Boolean isPartialPayment;
     @NotNull(message = "due date is required")
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+    @JsonFormat(pattern="yyyy-MM-dd'T'HH:mm:ss.SSS")
     private LocalDateTime dueDate;
     private LocalDateTime retentionDate;
     private long fee;
