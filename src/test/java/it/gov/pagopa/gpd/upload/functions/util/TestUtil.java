@@ -25,6 +25,12 @@ public class TestUtil {
                 .build();
     }
 
+    public static PaymentPositions getMockInvalidDebtPositions() {
+        return PaymentPositions.builder()
+                       .paymentPositions(List.of(getMockDebtPosition()))
+                       .build();
+    }
+
     public static PaymentPosition getMockDebtPosition() {
         return PaymentPosition.builder()
                 .iupd("IUPD_77777777777_92bd6")
@@ -33,6 +39,17 @@ public class TestUtil {
                 .fullName("Mario Rossi")
                 .paymentOption(List.of(getMockPaymentOption()))
                 .build();
+    }
+
+    public static PaymentPosition getMockInvalidDebtPosition() {
+        return PaymentPosition.builder()
+                       .iupd("IUPD_77777777777_92bd6")
+                       .type(Type.F)
+                       .fiscalCode("77777777777")
+                       .fullName("Mario Rossi")
+                       .email("invalid-email")
+                       .paymentOption(List.of(getMockPaymentOption()))
+                       .build();
     }
 
     public static PaymentOption getMockPaymentOption() {

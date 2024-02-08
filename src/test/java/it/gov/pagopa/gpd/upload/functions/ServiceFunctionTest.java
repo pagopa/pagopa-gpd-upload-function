@@ -36,7 +36,7 @@ class ServiceFunctionTest {
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 
     @Test
-    void runOk() throws Exception {
+    void runOK() throws Exception {
         // Prepare all mock response
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
         when(context.getLogger()).thenReturn(logger);
