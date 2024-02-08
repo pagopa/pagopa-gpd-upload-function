@@ -5,21 +5,23 @@
 
     <groupId>it.gov.pagopa.gpd.upload</groupId>
     <artifactId>gpd-upload-function</artifactId>
-    <version>0.0.9</version>
+    <version>0.0.8-18-pagopa-1482-queue</version>
     <packaging>jar</packaging>
 
     <name>GPD-Upload-Function</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <azure.functions.maven.plugin.version>1.26.0</azure.functions.maven.plugin.version>
         <azure.functions.java.library.version>3.0.0</azure.functions.java.library.version>
         <functionAppName>com.microsoft.azure-20220215182005862</functionAppName>
         <resteasy.version>3.15.3.Final</resteasy.version>
         <lombok.version>1.18.24</lombok.version>
+        <azure.eventgrid.version>4.20.1</azure.eventgrid.version>
         <azure.cosmos.version>4.54.0</azure.cosmos.version>
         <azure.storage.blob.version>12.25.1</azure.storage.blob.version>
+        <azure.storage.version>8.6.6</azure.storage.version>
     </properties>
 
     <dependencies>
@@ -38,17 +40,20 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-messaging-eventgrid</artifactId>
-            <version>4.20.1</version>
+            <version>${azure.eventgrid.version}</version>
         </dependency>
-
-
+        <dependency>
+            <groupId>com.microsoft.azure</groupId>
+            <artifactId>azure-storage</artifactId>
+            <version>${azure.storage.version}</version>
+        </dependency>
         <!-- End Azure -->
 
         <!-- Test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>5.8.2</version>
+            <version>5.10.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -59,37 +64,15 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
+            <artifactId>mockito-inline</artifactId>
+            <version>5.2.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
             <artifactId>mockito-junit-jupiter</artifactId>
             <version>4.3.1</version>
             <scope>test</scope>
-        </dependency>
-
-        <!-- jaxb -->
-        <dependency>
-            <groupId>com.sun.xml.ws</groupId>
-            <artifactId>jaxws-ri</artifactId>
-            <version>2.3.3</version>
-            <type>pom</type>
-        </dependency>
-        <dependency>
-            <groupId>javax.xml.ws</groupId>
-            <artifactId>jaxws-api</artifactId>
-            <version>2.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-core</artifactId>
-            <version>2.3.0.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-impl</artifactId>
-            <version>2.3.1</version>
-        </dependency>
-        <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
-            <version>2.3.1</version>
         </dependency>
 
         <!-- resteasy START -->
@@ -145,7 +128,8 @@
             <version>1.18.20</version>
             <scope>provided</scope>
         </dependency>
-        <!-- storage -->
+
+        <!-- storage START -->
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-cosmos</artifactId>
@@ -157,7 +141,9 @@
             <artifactId>azure-storage-blob</artifactId>
             <version>${azure.storage.blob.version}</version>
         </dependency>
+        <!-- storage END -->
 
+        <!-- validation START -->
         <dependency>
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
@@ -175,6 +161,7 @@
             <artifactId>expressly</artifactId>
             <version>5.0.0</version>
         </dependency>
+        <!-- validation END -->
 
     </dependencies>
 

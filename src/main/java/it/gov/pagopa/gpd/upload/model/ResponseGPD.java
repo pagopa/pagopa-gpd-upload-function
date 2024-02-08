@@ -2,8 +2,6 @@ package it.gov.pagopa.gpd.upload.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import it.gov.pagopa.gpd.upload.model.RetryStep;
 import lombok.*;
 
 @Builder(toBuilder = true)

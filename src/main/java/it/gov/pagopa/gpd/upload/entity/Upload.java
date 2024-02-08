@@ -22,9 +22,10 @@ public class Upload {
     private LocalDateTime end;
 
     public void addResponse(ResponseEntry responseEntry) {
+        // regardless of the condition increments the current counter because a list of IUPDs was processed
+        current += responseEntry.requestIDs.size();
         for (ResponseEntry existingEntry : responses) {
-            if (existingEntry.statusCode.equals(responseEntry.statusCode)
-                        && existingEntry.statusMessage.equals(responseEntry.statusMessage)) {
+            if (existingEntry.statusCode.equals(responseEntry.statusCode) && existingEntry.statusMessage.equals(responseEntry.statusMessage)) {
                 List<String> requestIDs = new ArrayList<>(existingEntry.requestIDs);
                 requestIDs.addAll(responseEntry.requestIDs);
                 existingEntry.requestIDs = requestIDs;
