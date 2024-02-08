@@ -45,7 +45,7 @@ public class StatusService {
                                                           .responses(new ArrayList<>())
                                                           .start(LocalDateTime.now()).build())
                                           .build();
-        Status status = StatusRepository.getInstance(logger).createIfNotExist(invocationId, key, fiscalCode, statusIfNotExist);
+        Status status = getStatusRepository().createIfNotExist(invocationId, key, fiscalCode, statusIfNotExist);
         if (status.upload.getEnd() != null) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService]Upload already processed. Upload finished at: %s", invocationId, status.upload.getEnd()));
             return status;
@@ -56,16 +56,16 @@ public class StatusService {
 
     // not thread safe could get an intermediate state
     public Status getStatus(String invocationId, String fiscalCode, String key) throws AppException {
-        return StatusRepository.getInstance(logger).getStatus(invocationId, key, fiscalCode);
+        return getStatusRepository().getStatus(invocationId, key, fiscalCode);
     }
 
     // update only end-time of a status entry
     public synchronized Status updateStatusEndTime(String invocationId, String fiscalCode, String key, LocalDateTime endTime) throws AppException {
-        Status status = StatusRepository.getInstance(logger).getStatus(invocationId, key, fiscalCode);
+        Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
         status.upload.setEnd(endTime);
 
         try {
-            StatusRepository.getInstance(logger).upsertStatus(invocationId, status.id, status);
+            getStatusRepository().upsertStatus(invocationId, status.id, status);
         } catch (AppException e) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Error while update upload Status", invocationId));
             throw new AppException("Error while update upload Status");
@@ -106,14 +106,18 @@ public class StatusService {
 
     public synchronized void updateStatus(String invocationId, String fiscalCode, String key, List<ResponseEntry> entries) throws AppException {
         try {
-            Status status = StatusRepository.getInstance(logger).getStatus(invocationId, key, fiscalCode);
+            Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
             for(ResponseEntry entry : entries) {
                 status.upload.addResponse(entry);
             }
-            StatusRepository.getInstance(logger).upsertStatus("invocationId", status.id, status);
+            getStatusRepository().upsertStatus("invocationId", status.id, status);
         } catch (AppException e) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Error while update upload Status", "invocationId"));
             throw new AppException("Error while update upload Status");
         }
+    }
+
+    public StatusRepository getStatusRepository() {
+        return StatusRepository.getInstance(logger);
     }
 }

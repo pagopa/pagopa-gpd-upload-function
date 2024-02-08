@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload.util;
 
+import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.exception.AppException;
@@ -19,7 +20,7 @@ import java.util.logging.Logger;
 
 public class PaymentPositionValidator {
 
-    public static void validate(String invocationId, Logger logger, PaymentPositions paymentPositions, String fiscalCode, String uploadKey) throws AppException {
+    public static boolean validate(ExecutionContext ctx, PaymentPositions paymentPositions, String fiscalCode, String uploadKey) {
         ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
         Set<ConstraintViolation<PaymentPosition>> violations;
@@ -31,12 +32,18 @@ public class PaymentPositionValidator {
             violations =  validator.validate(paymentPosition);
 
             if (!violations.isEmpty()) {
-                entries.add(createResponseEntry(logger, paymentPosition, violations));
+                entries.add(createResponseEntry(ctx.getLogger(), paymentPosition, violations));
                 iterator.remove();
             }
         }
 
-        StatusService.getInstance(logger).updateStatus(invocationId, fiscalCode, uploadKey, entries);
+        try {
+            getStatusService(ctx.getLogger()).updateStatus(ctx.getInvocationId(), fiscalCode, uploadKey, entries);
+        } catch (AppException e) {
+            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", ctx.getInvocationId()));
+            return false;
+        }
+        return true;
     }
 
     private static ResponseEntry createResponseEntry(Logger logger, PaymentPosition paymentPosition, Set<ConstraintViolation<PaymentPosition>> violations) {
@@ -54,5 +61,9 @@ public class PaymentPositionValidator {
         }
 
         return responseEntry;
+    }
+
+    public static StatusService getStatusService(Logger logger) {
+        return StatusService.getInstance(logger);
     }
 }

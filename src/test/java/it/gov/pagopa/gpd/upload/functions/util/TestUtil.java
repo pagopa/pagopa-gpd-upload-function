@@ -1,6 +1,11 @@
 package it.gov.pagopa.gpd.upload.functions.util;
 
-import com.microsoft.azure.functions.OutputBinding;
+import com.microsoft.azure.functions.HttpStatus;
+import it.gov.pagopa.gpd.upload.entity.PaymentPositionsMessage;
+import it.gov.pagopa.gpd.upload.entity.Status;
+import it.gov.pagopa.gpd.upload.entity.Upload;
+import it.gov.pagopa.gpd.upload.model.ResponseGPD;
+import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
@@ -52,17 +57,47 @@ public class TestUtil {
                 .build();
     }
 
-    public static OutputBinding<String> getMockOutputBinding() {
-        return new OutputBinding<String>() {
-            @Override
-            public String getValue() {
-                return null;
-            }
+    public static String getMockBlobCreatedEvent() {
+        String event = "{\"topic\":\"topic\"," +
+                      "\"subject\":\"/blobServices/default/containers/broker0001/blobs/ec0001/input/77777777777f3d1.json\"," +
+                      "\"eventType\":\"Microsoft.Storage.BlobCreated\",\"id\":\"id-test\"," +
+                      "\"data\":{\"api\":\"PutBlob\",\"clientRequestId\":\"client-request-id-test\"," +
+                      "\"requestId\":\"request-id-test\",\"eTag\":\"0x0\"," +
+                      "\"contentType\":\"application/json\",\"contentLength\":1," +
+                      "\"blobType\":\"BlockBlob\",\"blobUrl\":\"blob-url-test\"," +
+                      "\"url\":\"url-test\"," +
+                      "\"sequencer\":\"sequencer-test\",\"identity\":\"identity-test\"," +
+                      "\"storageDiagnostics\":{\"batchId\":\"batch-id-test\"}},\"dataVersion\":\"\"," +
+                      "\"metadataVersion\":\"1\",\"eventTime\":\"2024-02-07T14:11:36.0505464Z\"}";
+        return event;
+    }
 
-            @Override
-            public void setValue(String value) {
+    public static Status getMockStatus() {
+        return Status.builder()
+                       .id("id")
+                       .fiscalCode("fiscalCode")
+                       .brokerID("brokerId")
+                       .upload(Upload.builder().build())
+                       .build();
+    }
 
-            }
-        };
+    public static ResponseGPD getMockResponseGPD() {
+        ResponseGPD responseGPD = ResponseGPD.builder()
+                                         .retryStep(RetryStep.DONE)
+                                         .detail("detail")
+                                         .status(HttpStatus.OK.value())
+                                         .build();
+        return responseGPD;
+    }
+
+    public static PaymentPositionsMessage getMockPaymentPositionsMessage() {
+        PaymentPositionsMessage message = PaymentPositionsMessage.builder()
+                                                  .uploadKey("uploadKey")
+                                                  .brokerCode("brokerCode")
+                                                  .organizationFiscalCode("organizationFiscalCode")
+                                                  .retryCounter(0)
+                                                  .paymentPositions(TestUtil.getMockDebtPositions())
+                                                  .build();
+        return message;
     }
 }

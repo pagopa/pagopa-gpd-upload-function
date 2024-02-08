@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  */
 public class ValidationFunction {
 
-    private final Integer CHUNK_SIZE = Integer.valueOf(System.getenv("CHUNK_SIZE"));
+    private static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
@@ -79,9 +79,9 @@ public class ValidationFunction {
 
                     logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] broker: %s, fiscalCode: %s, filename: %s", context.getInvocationId(), broker, fiscalCode, filename));
 
-                    BinaryData content = BlobRepository.getInstance(logger).download(broker, fiscalCode, filename);
+                    BinaryData content = this.downloadBlob(context, broker, fiscalCode, filename);
                     String key = filename.substring(0, filename.indexOf("."));
-                    this.validateBlob(context.getInvocationId(), logger, broker, fiscalCode, key, content);
+                    this.validateBlob(context, broker, fiscalCode, key, content);
 
                     Runtime.getRuntime().gc();
                 } else {
@@ -91,45 +91,66 @@ public class ValidationFunction {
         }
     }
 
-    public boolean validateBlob(String invocationId, Logger logger, String broker, String fiscalCode, String uploadKey, BinaryData content) {
+    public boolean validateBlob(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, BinaryData content) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
         try {
             // deserialize payment positions from JSON to Object
             PaymentPositions paymentPositions = objectMapper.readValue(content.toString(), PaymentPositions.class);
-            Status status = StatusService.getInstance(logger).createStatus(invocationId, broker, fiscalCode, uploadKey, paymentPositions.getPaymentPositions().size());
+            Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, paymentPositions.getPaymentPositions().size());
             if (status.getUpload().getEnd() != null) { // already exist and upload is completed, so no-retry
                 return false;
             }
             // call payment position object validation logic
-            PaymentPositionValidator.validate(invocationId, logger, paymentPositions, fiscalCode, uploadKey);
+            PaymentPositionValidator.validate(ctx, paymentPositions, fiscalCode, uploadKey);
 
-            // create queue message
-            List<PaymentPosition> list = paymentPositions.getPaymentPositions();
-            for (int i = 0; i < list.size(); i += CHUNK_SIZE) {
-                int endIndex = Math.min(i + CHUNK_SIZE, list.size());
-                List<PaymentPosition> subList = list.subList(i, endIndex);
-
-                PaymentPositionsMessage message = PaymentPositionsMessage.builder()
-                        .uploadKey(uploadKey)
-                        .organizationFiscalCode(fiscalCode)
-                        .brokerCode(broker)
-                        .retryCounter(0)
-                        .paymentPositions(PaymentPositions.builder().paymentPositions(subList).build())
-                        .build();
-                objectMapper.disable(SerializationFeature.INDENT_OUTPUT); // remove useless whitespaces from message
-                QueueService.enqueue(invocationId, logger, objectMapper.writeValueAsString(message), 0);
-            }
+            // enqueue payment positions message by chunk size
+            this.enqueue(ctx, paymentPositions.getPaymentPositions(), uploadKey, fiscalCode, broker);
 
             return true;
         } catch (JsonMappingException e) {
             // todo: in this case is a BAD_REQUEST -> update status
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
+            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
             return false;
         } catch (AppException | JsonProcessingException e) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
+            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
             return false;
         }
+    }
+
+    public BinaryData downloadBlob(ExecutionContext ctx, String broker, String fiscalCode, String filename) {
+        return BlobRepository.getInstance(ctx.getLogger()).download(broker, fiscalCode, filename);
+    }
+
+    public Status createStatus(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, int paymentPositionSize) throws AppException {
+        Status status = StatusService.getInstance(ctx.getLogger())
+                                .createStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, paymentPositionSize);
+        return status;
+    }
+
+    public boolean enqueue(ExecutionContext ctx, List<PaymentPosition> paymentPositions, String uploadKey, String fiscalCode, String broker) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
+            int endIndex = Math.min(i + CHUNK_SIZE, paymentPositions.size());
+            List<PaymentPosition> subList = paymentPositions.subList(i, endIndex);
+
+            PaymentPositionsMessage message = PaymentPositionsMessage.builder()
+                                                      .uploadKey(uploadKey)
+                                                      .organizationFiscalCode(fiscalCode)
+                                                      .brokerCode(broker)
+                                                      .retryCounter(0)
+                                                      .paymentPositions(PaymentPositions.builder().paymentPositions(subList).build())
+                                                      .build();
+            objectMapper.disable(SerializationFeature.INDENT_OUTPUT); // remove useless whitespaces from message
+            try {
+                QueueService.enqueue(ctx.getInvocationId(), ctx.getLogger(), objectMapper.writeValueAsString(message), 0);
+            } catch (JsonProcessingException e) {
+                ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
+                return false;
+            }
+        }
+        return true;
     }
 }
