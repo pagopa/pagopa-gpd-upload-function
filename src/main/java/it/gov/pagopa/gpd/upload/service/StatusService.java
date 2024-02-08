@@ -30,6 +30,8 @@ public class StatusService {
         return instance;
     }
 
+    public StatusService() {}
+
     public StatusService(Logger logger) {
         this.logger = logger;
     }

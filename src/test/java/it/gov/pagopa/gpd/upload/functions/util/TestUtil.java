@@ -2,6 +2,7 @@ package it.gov.pagopa.gpd.upload.functions.util;
 
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.PaymentPositionsMessage;
+import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
@@ -14,6 +15,7 @@ import it.gov.pagopa.gpd.upload.model.pd.enumeration.Type;
 import lombok.experimental.UtilityClass;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @UtilityClass
@@ -94,7 +96,9 @@ public class TestUtil {
                        .id("id")
                        .fiscalCode("fiscalCode")
                        .brokerID("brokerId")
-                       .upload(Upload.builder().build())
+                       .upload(Upload.builder()
+                                       .responses(getMockResponseEntries())
+                                       .build())
                        .build();
     }
 
@@ -116,5 +120,15 @@ public class TestUtil {
                                                   .paymentPositions(TestUtil.getMockDebtPositions())
                                                   .build();
         return message;
+    }
+
+    public static ArrayList<ResponseEntry> getMockResponseEntries() {
+        ArrayList<ResponseEntry> responseEntries = new ArrayList<ResponseEntry>();
+        responseEntries.add(ResponseEntry.builder()
+                                    .statusCode(HttpStatus.OK.value())
+                                    .requestIDs(List.of("IUPD1"))
+                                    .statusMessage("status message")
+                                    .build());
+        return responseEntries;
     }
 }

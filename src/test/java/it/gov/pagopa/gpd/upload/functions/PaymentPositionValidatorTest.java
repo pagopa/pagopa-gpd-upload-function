@@ -3,6 +3,8 @@ package it.gov.pagopa.gpd.upload.functions;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.PaymentPositionValidator;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -19,20 +21,23 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class PaymentPositionValidatorTest {
-    private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
-
+    private static final ExecutionContext context = Mockito.mock(ExecutionContext.class);
+    private static MockedStatic<PaymentPositionValidator> positionValidatorMockedStatic;
     @Mock
     StatusService statusService;
 
-    @Test
-    void runOK() throws Exception {
-        // Prepare all mock response
+    @BeforeAll
+    public static void init() {
+        positionValidatorMockedStatic = mockStatic(PaymentPositionValidator.class);
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
         when(context.getLogger()).thenReturn(logger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
-        // Set mock event
-        MockedStatic<PaymentPositionValidator> validator = Mockito.mockStatic(PaymentPositionValidator.class);
-        validator.when(() -> PaymentPositionValidator.getStatusService(any())).thenReturn(statusService);
+    }
+
+    @Test
+    void runOK() {
+        // Set mock
+        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.getStatusService(any())).thenReturn(statusService);
         // Run method
         PaymentPositionValidator.validate(context, getMockDebtPositions(),"mockFiscalCode", "mockUploadKey");
         //Assertion
@@ -41,16 +46,16 @@ public class PaymentPositionValidatorTest {
 
     @Test
     void runKO() throws Exception {
-        // Prepare all mock response
-        Logger logger = Logger.getLogger("gpd-upload-test-logger");
-        when(context.getLogger()).thenReturn(logger);
-        when(context.getInvocationId()).thenReturn("testInvocationId");
-        // Set mock event
-        MockedStatic<PaymentPositionValidator> validator = Mockito.mockStatic(PaymentPositionValidator.class);
-        validator.when(() -> PaymentPositionValidator.getStatusService(any())).thenReturn(statusService);
+        //Set mock
+        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.getStatusService(any())).thenReturn(statusService);
         // Run method
         PaymentPositionValidator.validate(context, getMockInvalidDebtPositions(),"mockFiscalCode", "mockUploadKey");
         //Assertion
         assertTrue(true);
+    }
+
+    @AfterAll
+    public static void close() {
+        positionValidatorMockedStatic.close();
     }
 }
