@@ -1,13 +1,14 @@
 package it.gov.pagopa.gpd.upload.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.HttpStatus;
+import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
-import lombok.SneakyThrows;
 
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -36,85 +37,38 @@ public class GPDClient {
         return instance;
     }
 
-    @SneakyThrows
-    public ResponseGPD createBulkDebtPositions(String fiscalCode, PaymentPositions paymentPositionModel, Logger logger, String invocationId) {
+    public ResponseGPD createBulkDebtPositions(String fiscalCode, PaymentPositions paymentPositionModel, Logger logger, String invocationId) throws AppException {
         String requestId = UUID.randomUUID().toString();
-
-        logger.log(Level.INFO, () -> String.format(
-                "[id=%s][requestId=%s][GPD CALL][createDebtPositionsBulk]", invocationId, requestId));
-
+        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, fiscalCode);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        String paymentPositions = objectMapper.writeValueAsString(paymentPositionModel);
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, fiscalCode);
-        Response response = callCreateDebtPositions(path, paymentPositions, logger, requestId);
-        int status = response.getStatus();
 
-        ResponseGPD responseGPD;
-
-        if (status >= 200 && status < 300) {
-            responseGPD = ResponseGPD.builder()
-                    .retryStep(RetryStep.DONE)
-                    .status(status)
-                    .detail(String.valueOf(response.getStatus()))
-                    .build();
+        logger.log(Level.INFO, () -> String.format( "[id=%s][requestId=%s][GPD CALL][createDebtPositionsBulk]", invocationId, requestId));
+        try {
+            String paymentPositions = objectMapper.writeValueAsString(paymentPositionModel);
+            Response response = callCreateDebtPositions(path, paymentPositions, logger, requestId);
+            ResponseGPD responseGPD = this.createResponseGPD(response);
+            return responseGPD;
+        } catch (JsonProcessingException e) {
+            throw new AppException("Error while GPD-Core client call bulk creation: " + e.getMessage());
         }
-        else if (status >= 400 && status < 500) {
-            // skip retry if the status is 4xx
-            responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
-            responseGPD.setRetryStep(RetryStep.ERROR);
-        }
-        else {
-            responseGPD = ResponseGPD.builder()
-                                  .status(response.getStatus())
-                                  .retryStep(RetryStep.RETRY)
-                                  .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
-        }
-
-        logger.log(Level.WARNING, () -> String.format(
-                "[id=%s][requestId=%s][GPD CALL][createDebtPositionsBulk] HTTP status %s", invocationId, requestId, status));
-
-        return responseGPD;
     }
 
-    @SneakyThrows
-    public ResponseGPD createDebtPosition( String invocationId, Logger logger, String fiscalCode, PaymentPosition paymentPosition) {
+    public ResponseGPD createDebtPosition( String invocationId, Logger logger, String fiscalCode, PaymentPosition paymentPosition) throws AppException {
         String requestId = UUID.randomUUID().toString();
-
-        logger.log(Level.INFO, () -> String.format(
-                "[id=%s][requestId=%s][GPD CALL][createDebtPosition]", invocationId, requestId));
-
+        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, fiscalCode);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        String paymentPositions = objectMapper.writeValueAsString(paymentPosition);
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, fiscalCode);
-        Response response = callCreateDebtPositions(path, paymentPositions, logger, requestId);
-        int status = response.getStatus();
 
-        ResponseGPD responseGPD;
-
-        if (status >= 200 && status < 300) {
-            responseGPD = ResponseGPD.builder()
-                                  .retryStep(RetryStep.DONE)
-                                  .status(status)
-                                  .detail(String.valueOf(response.getStatus()))
-                                  .build();
+        logger.log(Level.INFO, () -> String.format("[id=%s][requestId=%s][GPD CALL][createDebtPosition]", invocationId, requestId));
+        try {
+            String paymentPositions = objectMapper.writeValueAsString(paymentPosition);
+            Response response = callCreateDebtPositions(path, paymentPositions, logger, requestId);
+            ResponseGPD responseGPD = this.createResponseGPD(response);
+            return responseGPD;
+        } catch (JsonProcessingException e) {
+            throw new AppException("Error while GPD-Core client call single creation: " + e.getMessage());
         }
-        else if (status >= 400 && status < 500) {
-            // skip retry if the status is 4xx
-            responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
-            responseGPD.setRetryStep(RetryStep.ERROR);
-        } else {
-            responseGPD = ResponseGPD.builder()
-                              .status(response.getStatus())
-                              .retryStep(RetryStep.RETRY)
-                              .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
-        }
-
-        logger.log(Level.WARNING, () -> String.format(
-                "[id=%s][requestId=%s][GPD CALL][createDebtPosition] HTTP status %s", invocationId, requestId, status));
-
-        return responseGPD;
     }
 
     public Response callCreateDebtPositions(String path, String paymentPositions, Logger logger, String requestId) {
@@ -135,5 +89,31 @@ public class GPDClient {
                     "[requestId=%s][createDebtPositions] Exception: %s", requestId, e.getMessage()));
             return Response.serverError().build();
         }
+    }
+
+    private ResponseGPD createResponseGPD(Response response) throws JsonProcessingException {
+        ResponseGPD responseGPD;
+        int status = response.getStatus();
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        if (status >= 200 && status < 300) {
+            responseGPD = ResponseGPD.builder()
+                                  .retryStep(RetryStep.DONE)
+                                  .status(status)
+                                  .detail(String.valueOf(status))
+                                  .build();
+        }
+        else if (status >= 400 && status < 500) {
+            // skip retry if the status is 4xx
+            responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
+            responseGPD.setRetryStep(RetryStep.ERROR);
+        }
+        else {
+            responseGPD = ResponseGPD.builder()
+                                  .status(status)
+                                  .retryStep(RetryStep.RETRY)
+                                  .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
+        }
+        return responseGPD;
     }
 }
