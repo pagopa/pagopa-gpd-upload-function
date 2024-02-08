@@ -1,16 +1,13 @@
-package it.gov.pagopa.gpd.upload.functions.util;
+package it.gov.pagopa.gpd.upload.functions.utils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import it.gov.pagopa.gpd.upload.entity.Status;
-import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.model.pd.Transfer;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.Type;
-import it.gov.pagopa.gpd.upload.util.MapUtils;
 
 import java.io.FileWriter;
 import java.io.IOException;

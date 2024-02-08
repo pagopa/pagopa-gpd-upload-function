@@ -1,4 +1,4 @@
-package it.gov.pagopa.gpd.upload.functions;
+package it.gov.pagopa.gpd.upload.functions.function;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -16,7 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.logging.Logger;
 
-import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
+import static it.gov.pagopa.gpd.upload.functions.utils.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;

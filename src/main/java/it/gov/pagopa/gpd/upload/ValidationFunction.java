@@ -103,7 +103,7 @@ public class ValidationFunction {
                 return false;
             }
             // call payment position object validation logic
-            PaymentPositionValidator.validate(ctx, paymentPositions, fiscalCode, uploadKey);
+            PaymentPositionValidator.validate(ctx, StatusService.getInstance(ctx.getLogger()), paymentPositions, fiscalCode, uploadKey);
 
             // enqueue payment positions message by chunk size
             this.enqueue(ctx, paymentPositions.getPaymentPositions(), uploadKey, fiscalCode, broker);

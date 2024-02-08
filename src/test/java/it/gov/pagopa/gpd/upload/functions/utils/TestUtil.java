@@ -1,4 +1,4 @@
-package it.gov.pagopa.gpd.upload.functions.util;
+package it.gov.pagopa.gpd.upload.functions.utils;
 
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.PaymentPositionsMessage;
@@ -17,19 +17,24 @@ import lombok.experimental.UtilityClass;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @UtilityClass
 public class TestUtil {
 
     public static PaymentPositions getMockDebtPositions() {
+        List<PaymentPosition> paymentPositionList = new ArrayList<>();
+        paymentPositionList.add(getMockDebtPosition());
         return PaymentPositions.builder()
-                .paymentPositions(List.of(getMockDebtPosition()))
+                .paymentPositions(paymentPositionList)
                 .build();
     }
 
     public static PaymentPositions getMockInvalidDebtPositions() {
+        List<PaymentPosition> paymentPositionList = new ArrayList<>();
+        paymentPositionList.add(getMockInvalidDebtPosition());
         return PaymentPositions.builder()
-                       .paymentPositions(List.of(getMockDebtPosition()))
+                       .paymentPositions(paymentPositionList)
                        .build();
     }
 
@@ -39,6 +44,7 @@ public class TestUtil {
                 .type(Type.F)
                 .fiscalCode("77777777777")
                 .fullName("Mario Rossi")
+               .companyName(UUID.randomUUID().toString().substring(0, 4))
                 .paymentOption(List.of(getMockPaymentOption()))
                 .build();
     }
@@ -49,6 +55,7 @@ public class TestUtil {
                        .type(Type.F)
                        .fiscalCode("77777777777")
                        .fullName("Mario Rossi")
+                       .companyName(UUID.randomUUID().toString().substring(0, 4))
                        .email("invalid-email")
                        .paymentOption(List.of(getMockPaymentOption()))
                        .build();

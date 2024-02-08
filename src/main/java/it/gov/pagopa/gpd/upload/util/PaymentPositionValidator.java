@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 
 public class PaymentPositionValidator {
 
-    public static boolean validate(ExecutionContext ctx, PaymentPositions paymentPositions, String fiscalCode, String uploadKey) {
+    public static boolean validate(ExecutionContext ctx, StatusService statusService, PaymentPositions paymentPositions, String fiscalCode, String uploadKey) {
         ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
         Set<ConstraintViolation<PaymentPosition>> violations;
@@ -38,7 +38,7 @@ public class PaymentPositionValidator {
         }
 
         try {
-            getStatusService(ctx.getLogger()).updateStatus(ctx.getInvocationId(), fiscalCode, uploadKey, entries);
+            statusService.updateStatus(ctx.getInvocationId(), fiscalCode, uploadKey, entries);
         } catch (AppException e) {
             ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", ctx.getInvocationId()));
             return false;
@@ -61,9 +61,5 @@ public class PaymentPositionValidator {
         }
 
         return responseEntry;
-    }
-
-    public static StatusService getStatusService(Logger logger) {
-        return StatusService.getInstance(logger);
     }
 }

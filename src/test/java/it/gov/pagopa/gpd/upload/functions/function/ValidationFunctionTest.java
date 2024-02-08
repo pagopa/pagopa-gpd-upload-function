@@ -1,4 +1,4 @@
-package it.gov.pagopa.gpd.upload.functions;
+package it.gov.pagopa.gpd.upload.functions.function;
 
 import com.azure.core.util.BinaryData;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.logging.Logger;
 
-import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
+import static it.gov.pagopa.gpd.upload.functions.utils.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -49,7 +49,7 @@ class ValidationFunctionTest {
         doReturn(debtPositionData).when(validationFunction).downloadBlob(any(), any(), any(), any());
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
         doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any());
-        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.validate(any(), any(), any(), any())).thenReturn(true);
+        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.validate(any(),any(), any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function

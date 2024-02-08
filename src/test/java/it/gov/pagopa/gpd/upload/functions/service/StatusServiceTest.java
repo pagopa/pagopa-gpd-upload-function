@@ -1,4 +1,4 @@
-package it.gov.pagopa.gpd.upload.functions;
+package it.gov.pagopa.gpd.upload.functions.service;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.exception.AppException;
@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
+import static it.gov.pagopa.gpd.upload.functions.utils.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
