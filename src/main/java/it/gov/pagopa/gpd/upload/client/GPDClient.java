@@ -18,14 +18,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class GPDClient {
-
-    static final String HEADER_REQUEST_ID = "X-Request-Id";
-    static final String HEADER_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
-    static final String GPD_DEBT_POSITIONS_PATH_V1 = "/v1/organizations/%s/debtpositions";
-    static final String GPD_DEBT_POSITIONS_PATH_V2 = "/v2/organizations/%s/debtpositions";
-    private static GPDClient instance = null;
-    final String GPD_HOST = System.getenv("GPD_HOST");
-    public final String GPD_SUBSCRIPTION_KEY = System.getenv("GPD_SUBSCRIPTION_KEY");
+    private static GPDClient instance;
+    private static final String HEADER_REQUEST_ID = "X-Request-Id";
+    private static final String HEADER_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
+    private static final String GPD_DEBT_POSITIONS_PATH_V1 = "/v1/organizations/%s/debtpositions";
+    private static final String GPD_DEBT_POSITIONS_PATH_V2 = "/v2/organizations/%s/debtpositions";
+    private final String GPD_HOST = System.getenv("GPD_HOST");
+    private final String GPD_SUBSCRIPTION_KEY = System.getenv("GPD_SUBSCRIPTION_KEY");
+    private static final String toPublishQueryParam = "toPublish";
+    private static final boolean toPublish = true;
 
     public GPDClient() {
     }
@@ -75,6 +76,7 @@ public class GPDClient {
         try {
             Response response = ClientBuilder.newClient()
                     .target(path)
+                    .queryParam(toPublishQueryParam, toPublish)
                     .request()
                     .header(HEADER_SUBSCRIPTION_KEY, GPD_SUBSCRIPTION_KEY)
                     .header(HEADER_REQUEST_ID, requestId)
