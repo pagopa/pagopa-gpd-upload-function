@@ -44,7 +44,8 @@ public class TestUtil {
                 .type(Type.F)
                 .fiscalCode("77777777777")
                 .fullName("Mario Rossi")
-               .companyName(UUID.randomUUID().toString().substring(0, 4))
+                .companyName(UUID.randomUUID().toString().substring(0, 4))
+                .officeName(UUID.randomUUID().toString().substring(0, 4))
                 .paymentOption(List.of(getMockPaymentOption()))
                 .build();
     }
@@ -56,6 +57,7 @@ public class TestUtil {
                        .fiscalCode("77777777777")
                        .fullName("Mario Rossi")
                        .companyName(UUID.randomUUID().toString().substring(0, 4))
+                       .officeName(UUID.randomUUID().toString().substring(0, 4))
                        .email("invalid-email")
                        .paymentOption(List.of(getMockPaymentOption()))
                        .build();
@@ -63,12 +65,14 @@ public class TestUtil {
 
     public static PaymentOption getMockPaymentOption() {
         return PaymentOption.builder()
+        		.nav("NAV_77777777777_92bd6")
                 .iuv("IUV_77777777777_92bd6")
                 .amount(100L)
                 .isPartialPayment(false)
                 .dueDate(LocalDateTime.now().plusYears(1L))
                 .fee(0L)
                 .notificationFee(0L)
+                .description(UUID.randomUUID().toString().substring(0, 4))
                 .transfer(List.of(getMockTransfer()))
                 .build();
     }
