@@ -34,7 +34,9 @@ public class PaymentPositionsGenerator {
             transferList.add(tf);
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.now().plus(1, ChronoUnit.DAYS), ZoneId.of("UTC"));
             PaymentOption po = PaymentOption.builder()
+            		                        .nav("NAV_UPLOAD_" + ID)
                                             .iuv("IUV_UPLOAD_" + ID)
+                                            .description("desc_" + UUID.randomUUID().toString().substring(0, 4))
                                             .amount(100L)
                                             .isPartialPayment(false)
                                             .dueDate(zonedDateTime.toLocalDateTime())
@@ -50,6 +52,7 @@ public class PaymentPositionsGenerator {
                                               //.email("email")
                                               .fullName(UUID.randomUUID().toString().substring(0, 4))
                                               .companyName(UUID.randomUUID().toString().substring(0, 4))
+                                              .officeName(UUID.randomUUID().toString().substring(0, 4))
                                               .paymentOption(paymentOptionList)
                                               .switchToExpired(false)
                                               .build();
