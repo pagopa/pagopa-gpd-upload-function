@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
@@ -58,6 +59,7 @@ public class PaymentPosition implements Serializable {
     // Payment Position properties
     @NotBlank(message = "company name is required")
     private String companyName; // es. Comune di Roma
+    @NotBlank(message = "office name is required")
     private String officeName; // es. Ufficio Tributi
     private LocalDateTime validityDate;
     @JsonProperty(access = Access.READ_ONLY)
@@ -66,6 +68,7 @@ public class PaymentPosition implements Serializable {
     private DebtPositionStatus status;
 
     @Valid
+    @Builder.Default
     private List<PaymentOption> paymentOption = new ArrayList<>();
 
     public void addPaymentOptions(PaymentOption paymentOpt) {
