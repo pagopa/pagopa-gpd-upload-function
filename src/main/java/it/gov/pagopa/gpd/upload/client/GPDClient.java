@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.exception.AppException;
+import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
@@ -55,9 +56,9 @@ public class GPDClient {
         }
     }
 
-    public ResponseGPD createDebtPosition( String invocationId, Logger logger, String fiscalCode, PaymentPosition paymentPosition) throws AppException {
+    public ResponseGPD createDebtPosition( String invocationId, Logger logger, String orgFiscalCode, PaymentPosition paymentPosition) throws AppException {
         String requestId = UUID.randomUUID().toString();
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, fiscalCode);
+        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, orgFiscalCode);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
@@ -117,5 +118,17 @@ public class GPDClient {
                                   .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
         }
         return responseGPD;
+    }
+
+    public ResponseGPD createDebtPosition(RequestGPD req) {
+        try {
+            if(req.getMode().equals(RequestGPD.Mode.BULK)) {
+                return createBulkDebtPositions(req.getOrgFiscalCode(), (PaymentPositions) req.getBody(), req.getLogger(), req.getInvocationId());
+            } else { // RequestGPD.Mode.SINGLE case
+                return createDebtPosition(req.getInvocationId(), req.getLogger(), req.getOrgFiscalCode(), (PaymentPosition) req.getBody());
+            }
+        } catch (AppException appException) {
+            return ResponseGPD.builder().build();
+        }
     }
 }
