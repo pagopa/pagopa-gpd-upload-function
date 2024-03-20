@@ -1,7 +1,7 @@
 package it.gov.pagopa.gpd.upload.functions.utils;
 
 import com.microsoft.azure.functions.HttpStatus;
-import it.gov.pagopa.gpd.upload.entity.PaymentPositionsMessage;
+import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
@@ -122,8 +122,8 @@ public class TestUtil {
         return responseGPD;
     }
 
-    public static PaymentPositionsMessage getMockPaymentPositionsMessage() {
-        PaymentPositionsMessage message = PaymentPositionsMessage.builder()
+    public static UploadMessage getMockPaymentPositionsMessage() {
+        UploadMessage message = UploadMessage.builder()
                                                   .uploadKey("uploadKey")
                                                   .brokerCode("brokerCode")
                                                   .organizationFiscalCode("organizationFiscalCode")

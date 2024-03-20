@@ -9,7 +9,7 @@ import com.microsoft.azure.functions.HttpStatus;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.client.GPDClient;
-import it.gov.pagopa.gpd.upload.entity.PaymentPositionsMessage;
+import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
@@ -49,9 +49,17 @@ public class ServiceFunction {
         objectMapper.registerModule(new JavaTimeModule());
 
         try {
-            PaymentPositionsMessage msg = objectMapper.readValue(message, PaymentPositionsMessage.class);
+            UploadMessage msg = objectMapper.readValue(message, UploadMessage.class);
             GPDClient gpdClient = getGPDClient();
             Function<RequestGPD, ResponseGPD> method = gpdClient::createDebtPosition;
+
+            switch(msg.operation) {
+                case CREATE:
+                    method = gpdClient::createDebtPosition;
+                    break;
+                case UPDATE:
+                    method = gpdClient::updateDebtPosition;
+            }
 
             this.operation(context, msg, method);
 
@@ -68,8 +76,8 @@ public class ServiceFunction {
         }
     }
 
-    private void operation(ExecutionContext ctx, PaymentPositionsMessage msg, Function<RequestGPD, ResponseGPD> method) throws AppException {
-        // constraint: paymentPositions size less than max bulk item per call -> compliant by design(max queue message = 64KB)
+    private void operation(ExecutionContext ctx, UploadMessage msg, Function<RequestGPD, ResponseGPD> method) throws AppException {
+        // constraint: paymentPositions size less than max bulk item per call -> compliant by design(max queue message = 64KB = ~30 PaymentPosition)
         StatusService statusService = getStatusService(ctx);
         RequestGPD requestGPD = RequestGPD.builder()
                                         .mode(RequestGPD.Mode.BULK)
@@ -105,7 +113,7 @@ public class ServiceFunction {
                                                               .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
             if (!retryResponses.isEmpty() && msg.retryCounter < MAX_RETRY) {
-                // Remove retryResponses from responseMap and enqueue retry responses
+                // Remove retry-responses from response-map and enqueue retry-responses
                 responseByIUPD.entrySet().removeAll(retryResponses.entrySet());
                 this.retry(ctx, msg, retryResponses);
             }
@@ -136,7 +144,7 @@ public class ServiceFunction {
     }
 
 
-    public void retry(ExecutionContext ctx, PaymentPositionsMessage msg, Map<String, ResponseGPD> retryResponses) {
+    public void retry(ExecutionContext ctx, UploadMessage msg, Map<String, ResponseGPD> retryResponses) {
         List<PaymentPosition> retryPositions = msg.paymentPositions.getPaymentPositions().stream()
                                                 .filter(paymentPosition -> retryResponses.containsKey(paymentPosition.getIupd()))
                                                 .collect(Collectors.toList());

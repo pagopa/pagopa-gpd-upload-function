@@ -8,7 +8,7 @@ import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.queue.CloudQueue;
 import com.microsoft.azure.storage.queue.CloudQueueMessage;
-import it.gov.pagopa.gpd.upload.entity.PaymentPositionsMessage;
+import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
@@ -41,7 +41,7 @@ public class QueueService {
 
     public static String createMessage(String uploadKey, String fiscalCode, String broker, int retryCounter, List<PaymentPosition> ppList) throws AppException {
         ObjectMapper objectMapper = new ObjectMapper();
-        PaymentPositionsMessage message = PaymentPositionsMessage.builder()
+        UploadMessage message = UploadMessage.builder()
                                                   .uploadKey(uploadKey)
                                                   .organizationFiscalCode(fiscalCode)
                                                   .brokerCode(broker)
