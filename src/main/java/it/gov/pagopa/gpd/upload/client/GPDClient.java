@@ -49,8 +49,7 @@ public class GPDClient {
         try {
             String paymentPositions = objectMapper.writeValueAsString(paymentPositionModel);
             Response response = postGPD(path, paymentPositions, logger);
-            ResponseGPD responseGPD = this.mapResponse(response);
-            return responseGPD;
+            return this.mapResponse(response);
         } catch (JsonProcessingException e) {
             throw new AppException("Error while GPD-Core client call bulk creation: " + e.getMessage());
         }
@@ -65,8 +64,7 @@ public class GPDClient {
         try {
             String paymentPositions = objectMapper.writeValueAsString(paymentPosition);
             Response response = postGPD(path, paymentPositions, logger);
-            ResponseGPD responseGPD = this.mapResponse(response);
-            return responseGPD;
+            return this.mapResponse(response);
         } catch (JsonProcessingException e) {
             throw new AppException("Error while GPD-Core client call single creation: " + e.getMessage());
         }
@@ -81,8 +79,7 @@ public class GPDClient {
         try {
             String paymentPositionsBody = objectMapper.writeValueAsString(paymentPositions);
             Response response = putGPD(path, paymentPositionsBody, logger);
-            ResponseGPD responseGPD = this.mapResponse(response);
-            return responseGPD;
+            return this.mapResponse(response);
         } catch (JsonProcessingException e) {
             throw new AppException("Error while calling Bulk UPDATE: " + e.getMessage());
         }
@@ -97,8 +94,7 @@ public class GPDClient {
         try {
             String paymentPositionBody = objectMapper.writeValueAsString(paymentPosition);
             Response response = putGPD(path, paymentPositionBody, logger);
-            ResponseGPD responseGPD = this.mapResponse(response);
-            return responseGPD;
+            return this.mapResponse(response);
         } catch (JsonProcessingException e) {
             throw new AppException("Error while calling UPDATE by IUPD");
         }
@@ -138,12 +134,12 @@ public class GPDClient {
                                         .put(Entity.json(body));
 
             logger.log(Level.INFO, () -> String.format(
-                    "[requestId=%s][createDebtPositions] Response: %s", requestId, response.getStatus()));
+                    "[requestId=%s][updateDebtPositions] Response: %s", requestId, response.getStatus()));
 
             return response;
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format(
-                    "[requestId=%s][createDebtPositions] Exception: %s", requestId, e.getMessage()));
+                    "[requestId=%s][updateDebtPositions] Exception: %s", requestId, e.getMessage()));
             return Response.serverError().build();
         }
     }
@@ -152,7 +148,7 @@ public class GPDClient {
         try {
             if(req.getMode().equals(RequestGPD.Mode.BULK)) {
                 return createBulkDebtPositions(req.getOrgFiscalCode(), (PaymentPositions) req.getBody(), req.getLogger(), req.getInvocationId());
-            } else { // RequestGPD.Mode.SINGLE case: tertium non datur
+            } else { // RequestGPD.Mode.SINGLE case
                 return createDebtPosition(req.getInvocationId(), req.getLogger(), req.getOrgFiscalCode(), (PaymentPosition) req.getBody());
             }
         } catch (AppException appException) {
@@ -164,7 +160,7 @@ public class GPDClient {
         try {
             if(req.getMode().equals(RequestGPD.Mode.BULK)) {
                 return updateBulkDebtPositions(req.getOrgFiscalCode(), (PaymentPositions) req.getBody(), req.getLogger(), req.getInvocationId());
-            } else { // RequestGPD.Mode.SINGLE case: tertium non datur
+            } else { // RequestGPD.Mode.SINGLE case
                 return updateDebtPosition(req.getOrgFiscalCode(), (PaymentPosition) req.getBody(), req.getLogger(), req.getInvocationId());
             }
         } catch (AppException appException) {

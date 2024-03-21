@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload.model.pd;
 
+import it.gov.pagopa.gpd.upload.model.ModelGPD;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -12,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class PaymentPositions {
+public class PaymentPositions implements ModelGPD {
     @Valid
     private List<@Valid PaymentPosition> paymentPositions;
 

@@ -2,6 +2,7 @@ package it.gov.pagopa.gpd.upload.model.pd;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonProperty.Access;
+import it.gov.pagopa.gpd.upload.model.ModelGPD;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.DebtPositionStatus;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.Type;
 import jakarta.validation.Valid;
@@ -26,7 +27,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class PaymentPosition implements Serializable {
+public class PaymentPosition implements Serializable, ModelGPD {
 
     /**
      * generated serialVersionUID
