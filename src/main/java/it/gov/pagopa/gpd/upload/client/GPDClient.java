@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.HttpStatus;
+import it.gov.pagopa.gpd.upload.model.ModelGPD;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
@@ -38,7 +39,7 @@ public class GPDClient {
         return instance;
     }
 
-    public ResponseGPD createDebtPosition(RequestGPD req) {
+    public ResponseGPD createDebtPosition(RequestGPD<ModelGPD> req) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         String path;
@@ -59,7 +60,7 @@ public class GPDClient {
         }
     }
 
-    public ResponseGPD updateDebtPosition(RequestGPD req) {
+    public ResponseGPD updateDebtPosition(RequestGPD<ModelGPD> req) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         String path;

@@ -10,10 +10,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UploadMessage {
-    public Operation operation;
-    public String uploadKey;
-    public String organizationFiscalCode;
-    public String brokerCode;
-    public Integer retryCounter;
-    public PaymentPositions paymentPositions;
+    private Operation operation;
+    private String uploadKey;
+    private String organizationFiscalCode;
+    private String brokerCode;
+    private Integer retryCounter;
+    private PaymentPositions paymentPositions;
 }
