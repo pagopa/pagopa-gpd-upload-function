@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
  */
 public class ServiceFunction {
     private static final Integer MAX_RETRY =
-            System.getenv("MAX_RETRY") != null ? Integer.parseInt(System.getenv("MAX_RETRY")) : 300;
+            System.getenv("MAX_RETRY") != null ? Integer.parseInt(System.getenv("MAX_RETRY")) : 1;
     private static final Integer RETRY_DELAY =
             System.getenv("RETRY_DELAY_IN_SECONDS") != null ? Integer.parseInt(System.getenv("RETRY_DELAY_IN_SECONDS")) : 300;
 
@@ -97,12 +97,12 @@ public class ServiceFunction {
             statusService.appendResponses(ctx.getInvocationId(), msg.organizationFiscalCode, msg.uploadKey, responseByIUPD);
         } else {
             // if BULK creation was successful
-            List<String> IUPDs = msg.paymentPositions.getPaymentPositions().stream().map(pp -> pp.getIupd()).collect(Collectors.toList());
+            List<String> IUPDs = msg.paymentPositions.getPaymentPositions().stream().map(PaymentPosition::getIupd).collect(Collectors.toList());
             statusService.appendResponse(ctx.getInvocationId(), msg.organizationFiscalCode, msg.uploadKey, IUPDs, response);
         }
     }
 
-    private Map<String, ResponseGPD>  processOperationOneByOne(ExecutionContext ctx, UploadMessage msg, Function<RequestGPD, ResponseGPD> method) {
+    private Map<String, ResponseGPD> processOperationOneByOne(ExecutionContext ctx, UploadMessage msg, Function<RequestGPD, ResponseGPD> method) {
         ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][ServiceFunction] Call GPD-Core one-by-one", ctx.getInvocationId()));
         Map<String, ResponseGPD> responseByIUPD = new HashMap<>();
         RequestGPD<PaymentPosition> requestGPD;

@@ -121,18 +121,27 @@ public class TestUtil {
                        .build();
     }
 
-    public static ResponseGPD getMockResponseGPD() {
+    public static ResponseGPD getOKMockResponseGPD() {
         ResponseGPD responseGPD = ResponseGPD.builder()
                                          .retryStep(RetryStep.DONE)
-                                         .detail("detail")
+                                         .detail(HttpStatus.OK.name())
                                          .status(HttpStatus.OK.value())
                                          .build();
         return responseGPD;
     }
 
-    public static UploadMessage getMockCreatePaymentPositionsMessage() {
+    public static ResponseGPD getKOMockResponseGPD() {
+        ResponseGPD responseGPD = ResponseGPD.builder()
+                                          .retryStep(RetryStep.RETRY)
+                                          .detail(HttpStatus.INTERNAL_SERVER_ERROR.name())
+                                          .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                                          .build();
+        return responseGPD;
+    }
+
+    public static UploadMessage getMockInputMessage(Operation operation) {
         UploadMessage message = UploadMessage.builder()
-                                        .operation(Operation.CREATE)
+                                        .operation(operation)
                                         .uploadKey("uploadKey")
                                         .brokerCode("brokerCode")
                                         .organizationFiscalCode("organizationFiscalCode")

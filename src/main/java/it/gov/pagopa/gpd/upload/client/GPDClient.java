@@ -4,12 +4,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.HttpStatus;
-import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -40,63 +38,44 @@ public class GPDClient {
         return instance;
     }
 
-    public ResponseGPD createBulkDebtPositions(String fiscalCode, PaymentPositions paymentPositionModel, Logger logger, String invocationId) throws AppException {
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, fiscalCode);
+    public ResponseGPD createDebtPosition(RequestGPD req) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-
-        logger.log(Level.INFO, () -> String.format( "[id=%s][GPD CALL][createDebtPositionsBulk]", invocationId));
+        String path;
+        if(req.getMode().equals(RequestGPD.Mode.BULK)) {
+            path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode());
+        } else { // RequestGPD.Mode.SINGLE case
+            path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, req.getOrgFiscalCode());
+        }
         try {
-            String paymentPositions = objectMapper.writeValueAsString(paymentPositionModel);
-            Response response = postGPD(path, paymentPositions, logger);
-            return this.mapResponse(response);
-        } catch (JsonProcessingException e) {
-            throw new AppException("Error while GPD-Core client call bulk creation: " + e.getMessage());
+            String body = objectMapper.writeValueAsString(req.getBody());
+            Response response = postGPD(path, body, req.getLogger());
+            return mapResponse(response);
+        } catch (JsonProcessingException jsonProcessingException) {
+            return ResponseGPD.builder()
+                           .retryStep(RetryStep.RETRY)
+                           .detail(HttpStatus.INTERNAL_SERVER_ERROR.name())
+                           .build();
         }
     }
 
-    public ResponseGPD createDebtPosition( String invocationId, Logger logger, String orgFiscalCode, PaymentPosition paymentPosition) throws AppException {
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, orgFiscalCode);
+    public ResponseGPD updateDebtPosition(RequestGPD req) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-
-        logger.log(Level.INFO, () -> String.format("[id=%s][GPD CALL][createDebtPosition]", invocationId));
+        String path;
         try {
-            String paymentPositions = objectMapper.writeValueAsString(paymentPosition);
-            Response response = postGPD(path, paymentPositions, logger);
-            return this.mapResponse(response);
+            if(req.getMode().equals(RequestGPD.Mode.BULK)) {
+                path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode());
+            } else { // RequestGPD.Mode.SINGLE case
+                PaymentPosition paymentPosition = (PaymentPosition) req.getBody();
+                path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, req.getOrgFiscalCode()) + URI_SEPARATOR + paymentPosition.getIupd();
+            }
+
+            String body = objectMapper.writeValueAsString(req.getBody());
+            Response response = putGPD(path, body, req.getLogger());
+            return mapResponse(response);
         } catch (JsonProcessingException e) {
-            throw new AppException("Error while GPD-Core client call single creation: " + e.getMessage());
-        }
-    }
-
-    public ResponseGPD updateBulkDebtPositions(String fiscalCode, PaymentPositions paymentPositions, Logger logger, String invocationId) throws AppException {
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, fiscalCode);
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-
-        logger.log(Level.INFO, () -> String.format( "[id=%s][GPD CALL][updateDebtPositionsBulk]", invocationId));
-        try {
-            String paymentPositionsBody = objectMapper.writeValueAsString(paymentPositions);
-            Response response = putGPD(path, paymentPositionsBody, logger);
-            return this.mapResponse(response);
-        } catch (JsonProcessingException e) {
-            throw new AppException("Error while calling Bulk UPDATE: " + e.getMessage());
-        }
-    }
-
-    public ResponseGPD updateDebtPosition(String orgFiscalCode, PaymentPosition paymentPosition, Logger logger, String invocationId) throws AppException {
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, orgFiscalCode) + URI_SEPARATOR + paymentPosition.getIupd();
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-
-        logger.log(Level.INFO, () -> String.format( "[id=%s][GPD CALL][updateDebtPosition]", invocationId));
-        try {
-            String paymentPositionBody = objectMapper.writeValueAsString(paymentPosition);
-            Response response = putGPD(path, paymentPositionBody, logger);
-            return this.mapResponse(response);
-        } catch (JsonProcessingException e) {
-            throw new AppException("Error while calling UPDATE by IUPD");
+            throw new RuntimeException(e);
         }
     }
 
@@ -104,12 +83,12 @@ public class GPDClient {
         String requestId = UUID.randomUUID().toString();
         try {
             Response response = ClientBuilder.newClient()
-                    .target(path)
-                    .queryParam(TO_PUBLISH_QUERY_PARAM, TO_PUBLISH_QUERY_VALUE)
-                    .request()
-                    .header(HEADER_SUBSCRIPTION_KEY, GPD_SUBSCRIPTION_KEY)
-                    .header(HEADER_REQUEST_ID, requestId)
-                    .post(Entity.json(body));
+                                        .target(path)
+                                        .queryParam(TO_PUBLISH_QUERY_PARAM, TO_PUBLISH_QUERY_VALUE)
+                                        .request()
+                                        .header(HEADER_SUBSCRIPTION_KEY, GPD_SUBSCRIPTION_KEY)
+                                        .header(HEADER_REQUEST_ID, requestId)
+                                        .post(Entity.json(body));
 
             logger.log(Level.INFO, () -> String.format(
                     "[requestId=%s][createDebtPositions] Response: %s", requestId, response.getStatus()));
@@ -144,30 +123,6 @@ public class GPDClient {
         }
     }
 
-    public ResponseGPD createDebtPosition(RequestGPD req) {
-        try {
-            if(req.getMode().equals(RequestGPD.Mode.BULK)) {
-                return createBulkDebtPositions(req.getOrgFiscalCode(), (PaymentPositions) req.getBody(), req.getLogger(), req.getInvocationId());
-            } else { // RequestGPD.Mode.SINGLE case
-                return createDebtPosition(req.getInvocationId(), req.getLogger(), req.getOrgFiscalCode(), (PaymentPosition) req.getBody());
-            }
-        } catch (AppException appException) {
-            return ResponseGPD.builder().build();
-        }
-    }
-
-    public ResponseGPD updateDebtPosition(RequestGPD req) {
-        try {
-            if(req.getMode().equals(RequestGPD.Mode.BULK)) {
-                return updateBulkDebtPositions(req.getOrgFiscalCode(), (PaymentPositions) req.getBody(), req.getLogger(), req.getInvocationId());
-            } else { // RequestGPD.Mode.SINGLE case
-                return updateDebtPosition(req.getOrgFiscalCode(), (PaymentPosition) req.getBody(), req.getLogger(), req.getInvocationId());
-            }
-        } catch (AppException appException) {
-            return ResponseGPD.builder().build();
-        }
-    }
-
     private ResponseGPD mapResponse(Response response) throws JsonProcessingException {
         ResponseGPD responseGPD;
         int status = response.getStatus();
@@ -193,5 +148,4 @@ public class GPDClient {
         }
         return responseGPD;
     }
-
 }

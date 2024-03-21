@@ -71,7 +71,7 @@ public class StatusServiceTest {
         doReturn(statusRepository).when(statusService).getStatusRepository();
         doReturn(getMockStatus()).when(statusRepository).getStatus(any(), any(), any());
         doNothing().when(statusRepository).upsertStatus(any(), any(), any());
-        statusService.appendResponse(ctx.getInvocationId(), "fiscalCode", "key", List.of("IUPD1"), getMockResponseGPD());
+        statusService.appendResponse(ctx.getInvocationId(), "fiscalCode", "key", List.of("IUPD1"), getOKMockResponseGPD());
         //Assertion
         assertTrue(true);
     }
