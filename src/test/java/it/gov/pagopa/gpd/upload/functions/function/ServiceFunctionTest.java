@@ -52,9 +52,9 @@ class ServiceFunctionTest {
         doNothing().when(statusService).appendResponses(any(), any(), any(), any());
         doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
         doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
-        String event = objectMapper.writeValueAsString(getMockPaymentPositionsMessage());
+        String message = objectMapper.writeValueAsString(getMockCreatePaymentPositionsMessage());
         // Run function
-        serviceFunction.run(event, context);
+        serviceFunction.run(message, context);
         //Assertion
         assertTrue(true);
     }

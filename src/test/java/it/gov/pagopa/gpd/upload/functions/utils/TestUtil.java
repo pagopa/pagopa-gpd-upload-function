@@ -5,8 +5,10 @@ import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
+import it.gov.pagopa.gpd.upload.model.Operation;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
+import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
@@ -21,6 +23,12 @@ import java.util.UUID;
 
 @UtilityClass
 public class TestUtil {
+    public static UploadInput getMockCreateInputData() {
+        return UploadInput.builder()
+                .operation(Operation.CREATE)
+                .paymentPositions(getMockDebtPositions())
+                .build();
+    }
 
     public static PaymentPositions getMockDebtPositions() {
         List<PaymentPosition> paymentPositionList = new ArrayList<>();
@@ -122,14 +130,15 @@ public class TestUtil {
         return responseGPD;
     }
 
-    public static UploadMessage getMockPaymentPositionsMessage() {
+    public static UploadMessage getMockCreatePaymentPositionsMessage() {
         UploadMessage message = UploadMessage.builder()
-                                                  .uploadKey("uploadKey")
-                                                  .brokerCode("brokerCode")
-                                                  .organizationFiscalCode("organizationFiscalCode")
-                                                  .retryCounter(0)
-                                                  .paymentPositions(TestUtil.getMockDebtPositions())
-                                                  .build();
+                                        .operation(Operation.CREATE)
+                                        .uploadKey("uploadKey")
+                                        .brokerCode("brokerCode")
+                                        .organizationFiscalCode("organizationFiscalCode")
+                                        .retryCounter(0)
+                                        .paymentPositions(TestUtil.getMockDebtPositions())
+                                        .build();
         return message;
     }
 
