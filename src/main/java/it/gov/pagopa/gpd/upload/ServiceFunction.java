@@ -53,7 +53,7 @@ public class ServiceFunction {
             GPDClient gpdClient = getGPDClient();
             Function<RequestGPD, ResponseGPD> method = gpdClient::createDebtPosition;
 
-            switch(msg.getOperation()) {
+            switch(msg.getUploadOperation()) {
                 case CREATE:
                     method = gpdClient::createDebtPosition;
                     break;

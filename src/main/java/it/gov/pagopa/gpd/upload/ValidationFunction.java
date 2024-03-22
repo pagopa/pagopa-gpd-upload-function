@@ -16,7 +16,7 @@ import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
-import it.gov.pagopa.gpd.upload.model.Operation;
+import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
@@ -100,7 +100,7 @@ public class ValidationFunction {
         try {
             // deserialize payment positions from JSON to Object
             UploadInput uploadInput = objectMapper.readValue(content.toString(), UploadInput.class);
-            PaymentPositions pps = uploadInput.getPaymentPositions();
+            PaymentPositions pps = PaymentPositions.builder().paymentPositions(uploadInput.getPaymentPositions()).build();
             Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, pps.getPaymentPositions().size());
             if (status.getUpload().getEnd() != null) { // already exist and upload is completed, so no-retry
                 return false;
@@ -109,7 +109,7 @@ public class ValidationFunction {
             PaymentPositionValidator.validate(ctx, StatusService.getInstance(ctx.getLogger()), pps, fiscalCode, uploadKey);
 
             // enqueue payment positions message by chunk size
-            this.enqueue(ctx, uploadInput.getOperation(), pps.getPaymentPositions(), uploadKey, fiscalCode, broker);
+            this.enqueue(ctx, uploadInput.getUploadOperation(), pps.getPaymentPositions(), uploadKey, fiscalCode, broker);
 
             return true;
         } catch (JsonMappingException e) {
@@ -132,7 +132,7 @@ public class ValidationFunction {
         return status;
     }
 
-    public boolean enqueue(ExecutionContext ctx, Operation operation, List<PaymentPosition> paymentPositions, String uploadKey, String fiscalCode, String broker) {
+    public boolean enqueue(ExecutionContext ctx, UploadOperation uploadOperation, List<PaymentPosition> paymentPositions, String uploadKey, String fiscalCode, String broker) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
@@ -140,7 +140,7 @@ public class ValidationFunction {
             List<PaymentPosition> subList = paymentPositions.subList(i, endIndex);
 
             UploadMessage message = UploadMessage.builder()
-                                            .operation(operation)
+                                            .uploadOperation(uploadOperation)
                                             .uploadKey(uploadKey)
                                             .organizationFiscalCode(fiscalCode)
                                             .brokerCode(broker)

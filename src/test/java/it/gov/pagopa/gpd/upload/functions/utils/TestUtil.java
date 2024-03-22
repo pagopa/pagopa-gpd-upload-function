@@ -5,7 +5,7 @@ import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
-import it.gov.pagopa.gpd.upload.model.Operation;
+import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
@@ -25,8 +25,8 @@ import java.util.UUID;
 public class TestUtil {
     public static UploadInput getMockCreateInputData() {
         return UploadInput.builder()
-                .operation(Operation.CREATE)
-                .paymentPositions(getMockDebtPositions())
+                .uploadOperation(UploadOperation.CREATE)
+                .paymentPositions(getMockDebtPositions().getPaymentPositions())
                 .build();
     }
 
@@ -139,9 +139,9 @@ public class TestUtil {
         return responseGPD;
     }
 
-    public static UploadMessage getMockInputMessage(Operation operation) {
+    public static UploadMessage getMockInputMessage(UploadOperation uploadOperation) {
         UploadMessage message = UploadMessage.builder()
-                                        .operation(operation)
+                                        .uploadOperation(uploadOperation)
                                         .uploadKey("uploadKey")
                                         .brokerCode("brokerCode")
                                         .organizationFiscalCode("organizationFiscalCode")

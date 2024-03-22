@@ -1,6 +1,6 @@
 package it.gov.pagopa.gpd.upload.entity;
 
-import it.gov.pagopa.gpd.upload.model.Operation;
+import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import lombok.*;
 
@@ -10,7 +10,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UploadMessage {
-    private Operation operation;
+    private UploadOperation uploadOperation;
     private String uploadKey;
     private String organizationFiscalCode;
     private String brokerCode;

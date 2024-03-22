@@ -6,7 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ServiceFunction;
 import it.gov.pagopa.gpd.upload.client.GPDClient;
-import it.gov.pagopa.gpd.upload.model.Operation;
+import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -51,7 +51,7 @@ class ServiceFunctionTest {
         doReturn(getOKMockResponseGPD()).when(gpdClient).createDebtPosition(any());
         doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
         doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
-        String message = objectMapper.writeValueAsString(getMockInputMessage(Operation.CREATE));
+        String message = objectMapper.writeValueAsString(getMockInputMessage(UploadOperation.CREATE));
         // Run function
         serviceFunction.run(message, context);
         //Assertion
@@ -75,7 +75,7 @@ class ServiceFunctionTest {
         doNothing().when(serviceFunction).retry(any(), any(), any());
         doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
         doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
-        String message = objectMapper.writeValueAsString(getMockInputMessage(Operation.CREATE));
+        String message = objectMapper.writeValueAsString(getMockInputMessage(UploadOperation.CREATE));
         // Run function
         serviceFunction.run(message, context);
         //Assertion
@@ -97,7 +97,7 @@ class ServiceFunctionTest {
         doReturn(getOKMockResponseGPD()).when(gpdClient).updateDebtPosition(any());
         doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
         doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
-        String message = objectMapper.writeValueAsString(getMockInputMessage(Operation.UPDATE));
+        String message = objectMapper.writeValueAsString(getMockInputMessage(UploadOperation.UPDATE));
         // Run function
         serviceFunction.run(message, context);
         //Assertion
@@ -121,7 +121,7 @@ class ServiceFunctionTest {
         doNothing().when(serviceFunction).retry(any(), any(), any());
         doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
         doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
-        String message = objectMapper.writeValueAsString(getMockInputMessage(Operation.UPDATE));
+        String message = objectMapper.writeValueAsString(getMockInputMessage(UploadOperation.UPDATE));
         // Run function
         serviceFunction.run(message, context);
         //Assertion
