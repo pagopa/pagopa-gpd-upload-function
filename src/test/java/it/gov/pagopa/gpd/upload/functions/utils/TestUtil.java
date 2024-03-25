@@ -1,12 +1,14 @@
 package it.gov.pagopa.gpd.upload.functions.utils;
 
 import com.microsoft.azure.functions.HttpStatus;
-import it.gov.pagopa.gpd.upload.entity.PaymentPositionsMessage;
+import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
+import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
+import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
@@ -21,6 +23,12 @@ import java.util.UUID;
 
 @UtilityClass
 public class TestUtil {
+    public static UploadInput getMockCreateInputData() {
+        return UploadInput.builder()
+                .uploadOperation(UploadOperation.CREATE)
+                .paymentPositions(getMockDebtPositions().getPaymentPositions())
+                .build();
+    }
 
     public static PaymentPositions getMockDebtPositions() {
         List<PaymentPosition> paymentPositionList = new ArrayList<>();
@@ -113,23 +121,33 @@ public class TestUtil {
                        .build();
     }
 
-    public static ResponseGPD getMockResponseGPD() {
+    public static ResponseGPD getOKMockResponseGPD() {
         ResponseGPD responseGPD = ResponseGPD.builder()
                                          .retryStep(RetryStep.DONE)
-                                         .detail("detail")
+                                         .detail(HttpStatus.OK.name())
                                          .status(HttpStatus.OK.value())
                                          .build();
         return responseGPD;
     }
 
-    public static PaymentPositionsMessage getMockPaymentPositionsMessage() {
-        PaymentPositionsMessage message = PaymentPositionsMessage.builder()
-                                                  .uploadKey("uploadKey")
-                                                  .brokerCode("brokerCode")
-                                                  .organizationFiscalCode("organizationFiscalCode")
-                                                  .retryCounter(0)
-                                                  .paymentPositions(TestUtil.getMockDebtPositions())
-                                                  .build();
+    public static ResponseGPD getKOMockResponseGPD() {
+        ResponseGPD responseGPD = ResponseGPD.builder()
+                                          .retryStep(RetryStep.RETRY)
+                                          .detail(HttpStatus.INTERNAL_SERVER_ERROR.name())
+                                          .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                                          .build();
+        return responseGPD;
+    }
+
+    public static UploadMessage getMockInputMessage(UploadOperation uploadOperation) {
+        UploadMessage message = UploadMessage.builder()
+                                        .uploadOperation(uploadOperation)
+                                        .uploadKey("uploadKey")
+                                        .brokerCode("brokerCode")
+                                        .organizationFiscalCode("organizationFiscalCode")
+                                        .retryCounter(0)
+                                        .paymentPositions(TestUtil.getMockDebtPositions())
+                                        .build();
         return message;
     }
 

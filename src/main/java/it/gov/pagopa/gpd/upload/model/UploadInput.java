@@ -1,6 +1,6 @@
-package it.gov.pagopa.gpd.upload.model.pd;
+package it.gov.pagopa.gpd.upload.model;
 
-import it.gov.pagopa.gpd.upload.model.ModelGPD;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,7 +13,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class PaymentPositions implements ModelGPD {
+public class UploadInput {
+    private UploadOperation uploadOperation;
     @Valid
     private List<@Valid PaymentPosition> paymentPositions;
 

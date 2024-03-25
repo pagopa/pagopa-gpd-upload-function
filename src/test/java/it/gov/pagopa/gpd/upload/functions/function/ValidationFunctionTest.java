@@ -45,10 +45,10 @@ class ValidationFunctionTest {
         when(context.getInvocationId()).thenReturn("testInvocationId");
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        BinaryData debtPositionData = BinaryData.fromString(objectMapper.writeValueAsString(getMockDebtPositions()));
-        doReturn(debtPositionData).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
+        doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
-        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any());
+        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> PaymentPositionValidator.validate(any(),any(), any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();

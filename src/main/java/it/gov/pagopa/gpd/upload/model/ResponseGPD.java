@@ -19,4 +19,8 @@ public class ResponseGPD {
     public void setRetryStep(RetryStep retryStep) {
         this.retryStep = retryStep;
     }
+
+    public boolean is2xxSuccessful() {
+        return Math.floorDiv(status, 100) == 2;
+    }
 }
