@@ -38,22 +38,4 @@ public class QueueService {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
         }
     }
-
-    public static String createMessage(String uploadKey, String fiscalCode, String broker, int retryCounter, List<PaymentPosition> ppList) throws AppException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        UploadMessage message = UploadMessage.builder()
-                                                  .uploadKey(uploadKey)
-                                                  .organizationFiscalCode(fiscalCode)
-                                                  .brokerCode(broker)
-                                                  .retryCounter(retryCounter)
-                                                  .paymentPositions(PaymentPositions.builder().paymentPositions(ppList).build())
-                                                  .build();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.INDENT_OUTPUT); // remove useless whitespaces from message
-        try {
-            return objectMapper.writeValueAsString(message);
-        } catch (JsonProcessingException e) {
-            throw new AppException(e.getMessage());
-        }
-    }
 }

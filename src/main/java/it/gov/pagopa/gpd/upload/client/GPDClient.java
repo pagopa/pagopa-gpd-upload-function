@@ -10,8 +10,11 @@ import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 
+import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -80,6 +83,26 @@ public class GPDClient {
         }
     }
 
+    public ResponseGPD deleteDebtPosition(RequestGPD<ModelGPD> req) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        String path;
+        try {
+            if(req.getMode().equals(RequestGPD.Mode.BULK)) {
+                path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode());
+            } else { // RequestGPD.Mode.SINGLE case
+                PaymentPosition paymentPosition = (PaymentPosition) req.getBody();
+                path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V1, req.getOrgFiscalCode()) + URI_SEPARATOR + paymentPosition.getIupd();
+            }
+
+            String body = objectMapper.writeValueAsString(req.getBody());
+            Response response = callGPD("DELETE", path, body, req.getLogger());
+            return mapResponse(response);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public Response postGPD(String path, String body, Logger logger) {
         String requestId = UUID.randomUUID().toString();
         try {
@@ -120,6 +143,28 @@ public class GPDClient {
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format(
                     "[requestId=%s][updateDebtPositions] Exception: %s", requestId, e.getMessage()));
+            return Response.serverError().build();
+        }
+    }
+
+    public Response callGPD(String httpMethod, String url, String body, Logger logger) {
+        Client client = ClientBuilder.newClient();
+        String requestId = UUID.randomUUID().toString();
+        try {
+            Invocation.Builder builder = client.target(url)
+                                                 .queryParam(TO_PUBLISH_QUERY_PARAM, TO_PUBLISH_QUERY_VALUE)
+                                                 .request(MediaType.APPLICATION_JSON)                                        .header(HEADER_SUBSCRIPTION_KEY, GPD_SUBSCRIPTION_KEY)
+                                                 .header(HEADER_SUBSCRIPTION_KEY, GPD_SUBSCRIPTION_KEY)
+                                                 .header(HEADER_REQUEST_ID, requestId);
+
+            Response response = builder.method(httpMethod, Entity.json(body));
+            logger.log(Level.INFO, () -> String.format(
+                    "[requestId=%s][%sDebtPositions] Response: %s", httpMethod, requestId, response.getStatus()));
+            client.close();
+            return response;
+        } catch (Exception e) {
+            logger.log(Level.WARNING, () -> String.format(
+                    "[requestId=%s][%sDebtPositions] Exception: %s", httpMethod, requestId, e.getMessage()));
             return Response.serverError().build();
         }
     }

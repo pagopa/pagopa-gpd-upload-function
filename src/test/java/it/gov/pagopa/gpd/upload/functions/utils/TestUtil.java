@@ -25,7 +25,7 @@ import java.util.UUID;
 public class TestUtil {
     public static UploadInput getMockCreateInputData() {
         return UploadInput.builder()
-                .uploadOperation(UploadOperation.CREATE)
+                .operation(UploadOperation.CREATE)
                 .paymentPositions(getMockDebtPositions().getPaymentPositions())
                 .build();
     }

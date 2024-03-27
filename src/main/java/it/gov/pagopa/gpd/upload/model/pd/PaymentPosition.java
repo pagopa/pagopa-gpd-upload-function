@@ -27,7 +27,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class PaymentPosition implements Serializable, ModelGPD {
+public class PaymentPosition implements Serializable {
 
     /**
      * generated serialVersionUID

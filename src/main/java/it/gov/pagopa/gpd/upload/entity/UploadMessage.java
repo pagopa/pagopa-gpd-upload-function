@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload.entity;
 
+import it.gov.pagopa.gpd.upload.model.ModelGPD;
 import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import lombok.*;
@@ -9,11 +10,11 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UploadMessage {
+public class UploadMessage<T extends ModelGPD> {
     private UploadOperation uploadOperation;
     private String uploadKey;
     private String organizationFiscalCode;
     private String brokerCode;
     private Integer retryCounter;
-    private PaymentPositions paymentPositions;
+    private T paymentPositions;
 }

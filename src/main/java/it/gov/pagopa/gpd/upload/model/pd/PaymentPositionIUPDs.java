@@ -14,21 +14,21 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
-public class PaymentPositions implements ModelGPD<PaymentPositions> {
+public class PaymentPositionIUPDs implements ModelGPD<PaymentPositionIUPDs> {
     @Valid
-    private List<@Valid PaymentPosition> paymentPositions;
+    private List<String> paymentPositionIUDPs;
 
-    public @Valid List<@Valid PaymentPosition> getPaymentPositions() {
-        return this.paymentPositions;
+    public @Valid List<String> getPaymentPositionIUDPs() {
+        return this.paymentPositionIUDPs;
     }
 
     @Override
     public List<String> getIUPD() {
-        return getPaymentPositions().stream().map(PaymentPosition::getIupd).collect(Collectors.toList());
+        return paymentPositionIUDPs;
     }
 
     @Override
-    public PaymentPositions filterById(List<String> ids) {
-        return new PaymentPositions();
+    public PaymentPositionIUPDs filterById(List<String> ids) {
+        return new PaymentPositionIUPDs();
     }
 }

@@ -19,7 +19,7 @@ import java.util.*;
 
 public class InputGenerator {
     public static void main(String[] args) throws IOException {
-        int N = 50; // debt position number target
+        int N = 3; // debt position number target
         String fiscalCode = "NFHCJ78D4ENCJADSA";
         String testType = "UPDATE_TEST";
         List<PaymentPosition> paymentPositionList = new ArrayList<>();
@@ -66,7 +66,7 @@ public class InputGenerator {
                                                          .build();
 
         UploadInput input = UploadInput.builder()
-                                    .uploadOperation(UploadOperation.CREATE)
+                                    .operation(UploadOperation.CREATE)
                                     .paymentPositions(paymentPositions.getPaymentPositions())
                                     .build();
 
@@ -76,7 +76,7 @@ public class InputGenerator {
         objectMapper.registerModule(javaTimeModule);
 
         String extender = UUID.randomUUID().toString().substring(0, 4);
-        String positionsJSON = objectMapper.writeValueAsString(paymentPositions);
+        String positionsJSON = objectMapper.writeValueAsString(paymentPositionList);
         String positionsFilename = "payment-positions" + extender + ".json";
         FileWriter fileWriter = new FileWriter(positionsFilename);
         fileWriter.write(positionsJSON);

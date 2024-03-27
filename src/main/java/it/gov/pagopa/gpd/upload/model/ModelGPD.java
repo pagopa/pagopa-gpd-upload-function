@@ -1,4 +1,10 @@
 package it.gov.pagopa.gpd.upload.model;
 
-public interface ModelGPD {
+import java.util.List;
+
+public interface ModelGPD<T> {
+
+    List<String> getIUPD();
+
+    T filterById(List<String> ids);
 }

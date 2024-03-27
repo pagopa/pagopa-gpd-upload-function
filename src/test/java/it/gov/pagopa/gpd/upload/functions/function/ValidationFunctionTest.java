@@ -48,8 +48,8 @@ class ValidationFunctionTest {
         BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
         doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
-        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any());
-        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.validate(any(),any(), any(), any(), any())).thenReturn(true);
+        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
+        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function
