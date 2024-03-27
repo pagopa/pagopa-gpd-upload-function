@@ -1,7 +1,6 @@
 package it.gov.pagopa.gpd.upload;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -12,11 +11,8 @@ import it.gov.pagopa.gpd.upload.client.GPDClient;
 import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
-import it.gov.pagopa.gpd.upload.model.ModelGPD;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionIUPDs;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.OperationService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
@@ -35,26 +31,22 @@ public class ServiceFunction {
     @FunctionName("PaymentPositionDequeueFunction")
     public void run(
             @QueueTrigger(name = "ValidPositionsTrigger", queueName = "%VALID_POSITIONS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String message,
-            final ExecutionContext context) {
-        Logger logger = context.getLogger();
-        String invocationId = context.getInvocationId();
+            final ExecutionContext ctx) {
+        Logger logger = ctx.getLogger();
+        String invocationId = ctx.getInvocationId();
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
         try {
-            // JavaType javaType = objectMapper.getTypeFactory().constructParametricType(UploadMessage.class, PaymentPositionIUPDs.class);
             UploadMessage msg = objectMapper.readValue(message, UploadMessage.class);
-            GPDClient gpdClient = getGPDClient();
-            var method = getMethod(msg, gpdClient);
-            var operationService = getService(msg);
+            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient());
+            getOperationService(ctx, method, msg).processBulkRequest();
 
-            operationService.processOperation(context, msg, method);
             // check if upload is completed
-            Status status = getStatusService(context).getStatus(invocationId, msg.getOrganizationFiscalCode(), msg.getUploadKey());
-
+            Status status = getStatusService(ctx).getStatus(invocationId, msg.getOrganizationFiscalCode(), msg.getUploadKey());
             if(status.upload.getCurrent() == status.upload.getTotal()) {
-                getStatusService(context).updateStatusEndTime(invocationId, status.fiscalCode, status.id, LocalDateTime.now());
-                report(context, logger, msg.getUploadKey(), msg.getBrokerCode(), msg.getOrganizationFiscalCode());
+                getStatusService(ctx).updateStatusEndTime(invocationId, status.fiscalCode, status.id, LocalDateTime.now());
+                report(ctx, logger, msg.getUploadKey(), msg.getBrokerCode(), msg.getOrganizationFiscalCode());
             }
 
             Runtime.getRuntime().gc();
@@ -71,7 +63,7 @@ public class ServiceFunction {
         BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), broker, fiscalCode, uploadKey + ".json");
     }
 
-    private Function<RequestGPD<ModelGPD>, ResponseGPD> getMethod(UploadMessage<ModelGPD> msg, GPDClient gpdClient) {
+    private Function<RequestGPD, ResponseGPD> getMethod(UploadMessage msg, GPDClient gpdClient) {
         return switch (msg.getUploadOperation()) {
             case CREATE -> gpdClient::createDebtPosition;
             case UPDATE -> gpdClient::updateDebtPosition;
@@ -79,11 +71,8 @@ public class ServiceFunction {
         };
     }
 
-    private OperationService getService(UploadMessage<ModelGPD> msg) {
-        return switch (msg.getUploadOperation()) {
-            case CREATE, UPDATE -> new OperationService<PaymentPositions>();
-            case DELETE -> new OperationService<PaymentPositionIUPDs>();
-        };
+    private OperationService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, UploadMessage message) {
+        return new OperationService(ctx, method, message);
     }
 
     public StatusService getStatusService(ExecutionContext ctx) {

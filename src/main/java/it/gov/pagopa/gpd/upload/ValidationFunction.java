@@ -12,14 +12,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
-import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
+import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositionIUPDs;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
@@ -36,8 +34,6 @@ import java.util.regex.Pattern;
  * Validation step act as a filter and is followed by the queuing step
  */
 public class ValidationFunction {
-
-    private static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
@@ -111,21 +107,20 @@ public class ValidationFunction {
             List<PaymentPosition> pps = input.getPaymentPositions();
             List<String> iupds = input.getPaymentPositionIUPDs();
 
-            if(pps != null) {
-                PaymentPositionValidator.validate(ctx, pps, fiscalCode, uploadKey);
+            if(pps != null)
                 size = pps.size();
-            } else if(iupds != null) {
+            else if(iupds != null)
                 size = iupds.size();
-            }
 
             Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, size);
+            if(pps != null) PaymentPositionValidator.validate(ctx, pps, fiscalCode, uploadKey);
 
             if (status.getUpload().getEnd() != null) { // already exist and upload is completed, so no-retry
                 return false;
             }
 
             // enqueue chunk and other input to form message
-            this.enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
+            enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
 
             return true;
         } catch (JsonMappingException e) {
@@ -142,63 +137,17 @@ public class ValidationFunction {
         return BlobRepository.getInstance(ctx.getLogger()).download(broker, fiscalCode, filename);
     }
 
-    public Status createStatus(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, int size) throws AppException {
+    public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size) throws AppException {
         Status status = StatusService.getInstance(ctx.getLogger())
-                                .createStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, size);
+                                .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size);
         return status;
     }
 
-    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, UploadOperation operation, List<PaymentPosition> paymentPositions, List<String> iupds, String uploadKey, String fiscalCode, String broker) {
-        if(UploadOperation.DELETE.equals(operation))
-            return enqueueDeleteMessage(ctx, om, operation, iupds, uploadKey, fiscalCode, broker);
-        else if(UploadOperation.CREATE.equals(operation) || UploadOperation.UPDATE.equals(operation))
-            return enqueueUpsertMessage(ctx, om, operation, paymentPositions, uploadKey, fiscalCode, broker);
-        else return false;
-    }
-
-    public boolean enqueueDeleteMessage(ExecutionContext ctx, ObjectMapper om, UploadOperation operation, List<String> iupds, String uploadKey, String fiscalCode, String broker) {
-        for (int i = 0; i < iupds.size(); i += CHUNK_SIZE) {
-            int endIndex = Math.min(i + CHUNK_SIZE, iupds.size());
-            List<String> subList = iupds.subList(i, endIndex);
-
-            UploadMessage<PaymentPositionIUPDs> message = UploadMessage.<PaymentPositionIUPDs>builder()
-                                            .uploadOperation(operation)
-                                            .uploadKey(uploadKey)
-                                            .organizationFiscalCode(fiscalCode)
-                                            .brokerCode(broker)
-                                            .retryCounter(0)
-                                            .paymentPositions(PaymentPositionIUPDs.builder().paymentPositionIUDPs(subList).build())
-                                            .build();
-            try {
-                QueueService.enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(message), 0);
-            } catch (JsonProcessingException e) {
-                ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
-                return false;
-            }
-        }
-        return true;
-    }
-
-    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, UploadOperation operation, List<PaymentPosition> paymentPositions, String uploadKey, String fiscalCode, String broker) {
-        for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
-            int endIndex = Math.min(i + CHUNK_SIZE, paymentPositions.size());
-            List<PaymentPosition> subList = paymentPositions.subList(i, endIndex);
-
-            UploadMessage<PaymentPositions> message = UploadMessage.<PaymentPositions>builder()
-                                                                            .uploadOperation(operation)
-                                                                            .uploadKey(uploadKey)
-                                                                            .organizationFiscalCode(fiscalCode)
-                                                                            .brokerCode(broker)
-                                                                            .retryCounter(0)
-                                                                            .paymentPositions(PaymentPositions.builder().paymentPositions(subList).build())
-                                                                            .build();
-            try {
-                QueueService.enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(message), 0);
-            } catch (JsonProcessingException e) {
-                ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
-                return false;
-            }
-        }
-        return true;
+    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, UploadOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
+        UploadMessage.UploadMessageBuilder builder = QueueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
+        return switch (operation) {
+            case CREATE, UPDATE -> QueueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
+            case DELETE -> QueueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
+        };
     }
 }

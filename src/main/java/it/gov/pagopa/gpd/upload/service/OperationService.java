@@ -2,74 +2,98 @@ package it.gov.pagopa.gpd.upload.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
-import it.gov.pagopa.gpd.upload.model.ModelGPD;
-import it.gov.pagopa.gpd.upload.model.RequestGPD;
-import it.gov.pagopa.gpd.upload.model.ResponseGPD;
-import it.gov.pagopa.gpd.upload.model.RetryStep;
+import it.gov.pagopa.gpd.upload.model.*;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
+import it.gov.pagopa.gpd.upload.model.pd.MultipleIUPD;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class OperationService<T extends ModelGPD<T>> {
+public class OperationService {
     private static final Integer MAX_RETRY =
             System.getenv("MAX_RETRY") != null ? Integer.parseInt(System.getenv("MAX_RETRY")) : 1;
     private static final Integer RETRY_DELAY =
             System.getenv("RETRY_DELAY_IN_SECONDS") != null ? Integer.parseInt(System.getenv("RETRY_DELAY_IN_SECONDS")) : 300;
 
-    private ResponseGPD applyRequest(ExecutionContext ctx, RequestGPD<T> requestGPD, Function<RequestGPD<T>, ResponseGPD> method) {
+    private ObjectMapper om;
+    private UploadMessage msg;
+    private Function<RequestGPD, ResponseGPD> method;
+    private ExecutionContext ctx;
+
+    public OperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, UploadMessage message) {
+        this.msg = message;
+        this.method = method;
+        this.ctx = ctx;
+        om = new ObjectMapper();
+        om.registerModule(new JavaTimeModule());
+    }
+
+    private ResponseGPD applyRequest(RequestGPD requestGPD) {
         ResponseGPD response = method.apply(requestGPD);
-        ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][ServiceFunction] Call GPD-Client", ctx.getInvocationId()));
+        ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Call GPD-Client", ctx.getInvocationId()));
         return  response;
     }
 
-    private RequestGPD<T> generateRequest(RequestGPD.Mode mode, Logger logger, String invocation, String orgFiscalCode, T pps) {
-        return RequestGPD.<T>builder()
-                           .mode(mode)
-                           .orgFiscalCode(orgFiscalCode)
-                           .body(pps)
-                           .logger(logger)
-                           .invocationId(invocation)
-                           .build();
+    private RequestGPD.RequestGPDBuilder generateRequest(RequestGPD.Mode mode, String orgFiscalCode, Object modelGPD) throws JsonProcessingException {
+        return RequestGPD.builder()
+                            .mode(mode)
+                            .orgFiscalCode(orgFiscalCode)
+                            .logger(ctx.getLogger())
+                            .invocationId(ctx.getInvocationId())
+                            .body(om.writeValueAsString(modelGPD));
     }
 
-    public void processOperation(ExecutionContext ctx, UploadMessage<T> msg, Function<RequestGPD<T>, ResponseGPD> method) throws AppException {
+    public void processBulkRequest() throws AppException, JsonProcessingException {
         // constraint: paymentPositions size less than max bulk item per call -> compliant by design(max queue message = 64KB = ~30 PaymentPosition)
         StatusService statusService = StatusService.getInstance(ctx.getLogger());
 
-        RequestGPD<T> requestGPD = generateRequest(RequestGPD.Mode.BULK, ctx.getLogger(), ctx.getInvocationId(), msg.getOrganizationFiscalCode(), msg.getPaymentPositions());
-        ResponseGPD response = applyRequest(ctx, requestGPD, method);
+        RequestGPD requestGPD = switch (msg.getUploadOperation()) {
+            case CREATE, UPDATE -> generateRequest(RequestGPD.Mode.BULK, msg.getOrganizationFiscalCode(), new PaymentPositions(msg.getPaymentPositions())).build();
+            case DELETE -> generateRequest(RequestGPD.Mode.BULK, msg.getOrganizationFiscalCode(), new MultipleIUPD(msg.getPaymentPositionIUPDs())).build();
+        };
+
+        List<String> IUPDList = switch (msg.getUploadOperation()) {
+            case CREATE, UPDATE -> msg.getPaymentPositions().stream()
+                                           .map(PaymentPosition::getIupd)
+                                           .collect(Collectors.toList());
+            case DELETE -> msg.getPaymentPositionIUPDs();
+        };
+
+        ResponseGPD response = applyRequest(requestGPD);
 
         if(!response.is2xxSuccessful()) {
             // if BULK creation wasn't successful, switch to single debt position creation
-            Map<String, ResponseGPD> responseByIUPD = processOperationOneByOne(ctx, msg, method);
-            ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][ServiceFunction] Call Status update for %s IUPDs", ctx.getInvocationId(), responseByIUPD.keySet().size()));
+            Map<String, ResponseGPD> responseByIUPD = processSingleRequest(IUPDList);
+            ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Call Status update for %s IUPDs", ctx.getInvocationId(), responseByIUPD.keySet().size()));
             statusService.appendResponses(ctx.getInvocationId(), msg.getOrganizationFiscalCode(), msg.getUploadKey(), responseByIUPD);
         } else {
             // if BULK creation was successful
-            List<String> IUPDs = msg.getPaymentPositions().getIUPD();
-            statusService.appendResponse(ctx.getInvocationId(), msg.getOrganizationFiscalCode(), msg.getUploadKey(), IUPDs, response);
+            statusService.appendResponse(ctx.getInvocationId(), msg.getOrganizationFiscalCode(), msg.getUploadKey(), IUPDList, response);
         }
     }
 
-    private Map<String, ResponseGPD> processOperationOneByOne(ExecutionContext ctx, UploadMessage<T> msg, Function<RequestGPD<T>, ResponseGPD> method) {
-        ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][ServiceFunction] Single mode processing", ctx.getInvocationId()));
+    private Map<String, ResponseGPD> processSingleRequest(List<String> IUPDList) throws JsonProcessingException {
+        ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Single mode processing", ctx.getInvocationId()));
         Map<String, ResponseGPD> responseByIUPD = new HashMap<>();
-        List<String> iupdList = msg.getPaymentPositions().getIUPD();
 
-        for(String iupd: iupdList) {
-            RequestGPD<T> requestGPD = generateRequest(RequestGPD.Mode.SINGLE, ctx.getLogger(), ctx.getInvocationId(), msg.getOrganizationFiscalCode(), msg.getPaymentPositions());
-            ResponseGPD response = applyRequest(ctx, requestGPD, method);
-            responseByIUPD.put(iupd, response);
+        for(String IUPD: IUPDList) {
+            RequestGPD requestGPD = switch (msg.getUploadOperation()) {
+                case CREATE, UPDATE -> generateRequest(RequestGPD.Mode.SINGLE, msg.getOrganizationFiscalCode(),
+                        new PaymentPositions(msg.getPaymentPositions().stream().filter(pp -> pp.getIupd().equals(IUPD)).toList())).build();
+                case DELETE -> generateRequest(RequestGPD.Mode.SINGLE, msg.getOrganizationFiscalCode(),
+                        new MultipleIUPD(List.of(new String[]{IUPD}))).build();
+            };
+            ResponseGPD response = applyRequest(requestGPD);
+            responseByIUPD.put(IUPD, response);
         }
 
         // Selecting responses where retry == true
@@ -80,38 +104,26 @@ public class OperationService<T extends ModelGPD<T>> {
         if (!retryResponses.isEmpty() && msg.getRetryCounter() < MAX_RETRY) {
             // Remove retry-responses from response-map and enqueue retry-responses
             responseByIUPD.entrySet().removeAll(retryResponses.entrySet());
-            this.retry(ctx, msg, retryResponses);
+            this.retry(updateMessageForRetry(retryResponses));
         }
 
         return responseByIUPD;
     }
 
-    public void retry(ExecutionContext ctx, UploadMessage<T> msg, Map<String, ResponseGPD> retryResponses) {
-        T retryPositions = msg.getPaymentPositions().filterById(retryResponses.keySet().stream().toList());
+    private UploadMessage updateMessageForRetry(Map<String, ResponseGPD> retryResponse) {
+        msg.setRetryCounter(msg.getRetryCounter()+1);
+        List<String> retryIUPD = retryResponse.keySet().stream().toList();
 
-        try {
-            String message = generateMessage(msg.getUploadKey(), msg.getOrganizationFiscalCode(), msg.getBrokerCode(), msg.getRetryCounter()+1, retryPositions);
-            QueueService.enqueue(ctx.getInvocationId(), ctx.getLogger(), message, RETRY_DELAY);
-        } catch (AppException e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
-        }
+        switch (msg.getUploadOperation()) {
+            case CREATE, UPDATE -> msg.setPaymentPositions(msg.getPaymentPositions().stream().
+                                                                   filter(pp -> retryIUPD.contains(pp.getIupd())).toList());
+            case DELETE -> msg.setPaymentPositionIUPDs(retryIUPD);
+        };
+        return msg;
     }
 
-    private String generateMessage(String uploadKey, String fiscalCode, String broker, int retryCounter, T paymentPositions) throws AppException {
-        UploadMessage<T> message = UploadMessage.<T>builder()
-                                   .uploadKey(uploadKey)
-                                   .organizationFiscalCode(fiscalCode)
-                                   .brokerCode(broker)
-                                   .retryCounter(retryCounter)
-                                   .paymentPositions(paymentPositions)
-                                   .build();
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.INDENT_OUTPUT); // remove useless whitespaces from message
-        try {
-            return objectMapper.writeValueAsString(message);
-        } catch (JsonProcessingException e) {
-            throw new AppException(e.getMessage());
-        }
+    public boolean retry(UploadMessage msg) throws JsonProcessingException {
+        ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Retry!", ctx.getInvocationId()));
+        return QueueService.enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(msg), RETRY_DELAY);
     }
 }

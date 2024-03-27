@@ -11,10 +11,10 @@ import java.util.logging.Logger;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RequestGPD<T extends ModelGPD> {
+public class RequestGPD {
     private Mode mode;
     private String orgFiscalCode;
-    private T body;
+    private String body;
     private Logger logger;
     private String invocationId;
 
