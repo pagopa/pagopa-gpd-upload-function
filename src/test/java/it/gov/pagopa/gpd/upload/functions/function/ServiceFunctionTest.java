@@ -46,11 +46,11 @@ class ServiceFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
-        doReturn(statusService).when(serviceFunction).getStatusService(any());
+        //doReturn(statusService).when(serviceFunction).getStatusService(any());
         doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
-        doReturn(getOKMockResponseGPD()).when(gpdClient).createDebtPosition(any());
-        doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
-        doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
+        //doReturn(getOKMockResponseGPD()).when(gpdClient).createDebtPosition(any());
+        //doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
+        //doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
         String message = objectMapper.writeValueAsString(getMockInputMessage(CRUDOperation.CREATE));
         // Run function
         serviceFunction.run(message, context);
@@ -68,13 +68,13 @@ class ServiceFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
-        doReturn(statusService).when(serviceFunction).getStatusService(any());
+        //doReturn(statusService).when(serviceFunction).getStatusService(any());
         doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
-        doReturn(getKOMockResponseGPD()).when(gpdClient).createDebtPosition(any());
-        doNothing().when(statusService).appendResponses(any(), any(), any(), any());
+        //doReturn(getKOMockResponseGPD()).when(gpdClient).createDebtPosition(any());
+        //doNothing().when(statusService).appendResponses(any(), any(), any(), any());
         // todo doNothing().when(serviceFunction).retry(any(), any(), any());
-        doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
-        doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
+        //doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
+        //doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
         String message = objectMapper.writeValueAsString(getMockInputMessage(CRUDOperation.CREATE));
         // Run function
         serviceFunction.run(message, context);
@@ -92,11 +92,11 @@ class ServiceFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
-        doReturn(statusService).when(serviceFunction).getStatusService(any());
+        //doReturn(statusService).when(serviceFunction).getStatusService(any());
         doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
-        doReturn(getOKMockResponseGPD()).when(gpdClient).updateDebtPosition(any());
-        doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
-        doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
+        //doReturn(getOKMockResponseGPD()).when(gpdClient).updateDebtPosition(any());
+        //doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
+        //doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
         String message = objectMapper.writeValueAsString(getMockInputMessage(CRUDOperation.UPDATE));
         // Run function
         serviceFunction.run(message, context);
@@ -114,13 +114,13 @@ class ServiceFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
-        doReturn(statusService).when(serviceFunction).getStatusService(any());
+        //doReturn(statusService).when(serviceFunction).getStatusService(any());
         doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
-        doReturn(getKOMockResponseGPD()).when(gpdClient).updateDebtPosition(any());
-        doNothing().when(statusService).appendResponses(any(), any(), any(), any());
+        //doReturn(getKOMockResponseGPD()).when(gpdClient).updateDebtPosition(any());
+        //doNothing().when(statusService).appendResponses(any(), any(), any(), any());
         // todo doNothing().when(serviceFunction).retry(any(), any(), any());
-        doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
-        doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
+        //doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
+        //doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
         String message = objectMapper.writeValueAsString(getMockInputMessage(CRUDOperation.UPDATE));
         // Run function
         serviceFunction.run(message, context);

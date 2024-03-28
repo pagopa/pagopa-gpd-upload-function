@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -78,7 +79,7 @@ public class StatusService {
 
     // method overloading: handle a list of IUPDs and related response -> all IUPDs must be associated to the same response
     public void appendResponse(String invocationId, String fiscalCode, String key, List<String> iUPDs, ResponseGPD response) throws AppException {
-        String detail = response.getDetail();
+        String detail = Optional.ofNullable(response.getDetail()).orElse("");
         ResponseEntry entry = ResponseEntry.builder()
                                               .statusCode(response.getStatus())
                                               .statusMessage(detail.substring(0, Math.min(detail.length(), MAX_DETAILS_LENGTH)))
@@ -93,7 +94,7 @@ public class StatusService {
         for (String iUPD : responses.keySet()) {
             ResponseGPD response = responses.get(iUPD);
             List<String> iUPDs = List.of(iUPD);
-            String detail = response.getDetail();
+            String detail = Optional.ofNullable(response.getDetail()).orElse("");;
             ResponseEntry responseEntry = ResponseEntry.builder()
                                                   .statusCode(response.getStatus())
                                                   .statusMessage(detail.substring(0, Math.min(detail.length(), MAX_DETAILS_LENGTH)))

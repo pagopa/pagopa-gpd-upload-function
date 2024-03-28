@@ -39,12 +39,11 @@ public class ServiceFunction {
         String invocationId = ctx.getInvocationId();
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        ctx.getLogger().log(Level.INFO, "Message: " + message);
 
         try {
             QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
             Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
-            getOperationService(ctx, method, msg).processBulkRequest();
+            getOperationService(ctx, method, getPositionMessage(msg)).processBulkRequest();
 
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, msg.getOrganizationFiscalCode(), msg.getUploadKey());
@@ -75,8 +74,8 @@ public class ServiceFunction {
         };
     }
 
-    private OperationService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, QueueMessage queueMessage) {
-        return new OperationService(ctx, method, getPositionMessage(queueMessage));
+    private OperationService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, PositionMessage positionMessage) {
+        return new OperationService(ctx, method, positionMessage);
     }
 
     private PositionMessage getPositionMessage(QueueMessage queueMessage) {

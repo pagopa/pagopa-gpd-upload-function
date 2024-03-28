@@ -55,6 +55,7 @@ public class TestUtil {
                 .companyName(UUID.randomUUID().toString().substring(0, 4))
                 .officeName(UUID.randomUUID().toString().substring(0, 4))
                 .paymentOption(List.of(getMockPaymentOption()))
+                .switchToExpired(false)
                 .build();
     }
 
@@ -67,6 +68,7 @@ public class TestUtil {
                        .companyName(UUID.randomUUID().toString().substring(0, 4))
                        .officeName(UUID.randomUUID().toString().substring(0, 4))
                        .email("invalid-email")
+                       .switchToExpired(false)
                        .paymentOption(List.of(getMockPaymentOption()))
                        .build();
     }
@@ -77,6 +79,7 @@ public class TestUtil {
                 .iuv("IUV_77777777777_92bd6")
                 .amount(100L)
                 .isPartialPayment(false)
+                .description("description")
                 .dueDate(LocalDateTime.now().plusYears(1L))
                 .fee(0L)
                 .notificationFee(0L)
