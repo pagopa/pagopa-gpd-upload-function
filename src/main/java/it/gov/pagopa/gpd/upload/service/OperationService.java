@@ -94,6 +94,6 @@ public class OperationService {
 
     public boolean retry(QueueMessage msg) throws JsonProcessingException {
         ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Retry!", ctx.getInvocationId()));
-        return QueueService.enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(msg), RETRY_DELAY);
+        return QueueService.getInstance().enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(msg), RETRY_DELAY);
     }
 }

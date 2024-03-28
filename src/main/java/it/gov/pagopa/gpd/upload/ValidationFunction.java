@@ -21,7 +21,7 @@ import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
-import it.gov.pagopa.gpd.upload.util.PaymentPositionValidator;
+import it.gov.pagopa.gpd.upload.util.GPDValidator;
 
 import java.util.List;
 import java.util.logging.Level;
@@ -113,7 +113,7 @@ public class ValidationFunction {
                 size = iupds.size();
 
             Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, size);
-            if(pps != null) PaymentPositionValidator.validate(ctx, pps, fiscalCode, uploadKey);
+            if(pps != null) GPDValidator.validate(ctx, pps, fiscalCode, uploadKey);
 
             if (status.getUpload().getEnd() != null) { // already exist and upload is completed, so no-retry
                 return false;
@@ -144,10 +144,10 @@ public class ValidationFunction {
     }
 
     public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
-        QueueMessage.QueueMessageBuilder builder = QueueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
+        QueueMessage.QueueMessageBuilder builder = QueueService.getInstance().generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
         return switch (operation) {
-            case CREATE, UPDATE -> QueueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
-            case DELETE -> QueueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
+            case CREATE, UPDATE -> QueueService.getInstance().enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
+            case DELETE -> QueueService.getInstance().enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
         };
     }
 }

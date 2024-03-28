@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -25,10 +24,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
-import static it.gov.pagopa.gpd.upload.functions.utils.TestUtil.getMockStatus;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.doReturn;
 
 @ExtendWith(MockitoExtension.class)
 public class OperationServiceTest {
@@ -36,13 +32,6 @@ public class OperationServiceTest {
     public enum ResultType {SUCCESS, FAIL}
 
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
-
-    @Mock
-    StatusService statusService;
-
-    @Mock
-    StatusRepository statusRepository;
-
 
     @Test
     void test1() throws AppException, JsonProcessingException {
@@ -80,8 +69,8 @@ public class OperationServiceTest {
     private ResponseGPD doMockedThingsFail(RequestGPD requestGPD) {
         return ResponseGPD.builder()
                        .detail("failed request")
-                       .retryStep(RetryStep.DONE)
-                       .status(HttpStatus.OK.value())
+                       .retryStep(RetryStep.ERROR)
+                       .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                        .build();
     }
 

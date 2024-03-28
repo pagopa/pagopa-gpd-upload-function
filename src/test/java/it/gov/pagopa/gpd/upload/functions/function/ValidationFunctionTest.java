@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
-import it.gov.pagopa.gpd.upload.util.PaymentPositionValidator;
+import it.gov.pagopa.gpd.upload.util.GPDValidator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -30,11 +30,11 @@ class ValidationFunctionTest {
 
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 
-    private static MockedStatic<PaymentPositionValidator> positionValidatorMockedStatic;
+    private static MockedStatic<GPDValidator> positionValidatorMockedStatic;
 
     @BeforeAll
     public static void init() {
-        positionValidatorMockedStatic = mockStatic(PaymentPositionValidator.class);
+        positionValidatorMockedStatic = mockStatic(GPDValidator.class);
     }
 
     @Test
@@ -49,7 +49,7 @@ class ValidationFunctionTest {
         doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
         doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
-        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.validate(any(),any(), any(), any())).thenReturn(true);
+        positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function

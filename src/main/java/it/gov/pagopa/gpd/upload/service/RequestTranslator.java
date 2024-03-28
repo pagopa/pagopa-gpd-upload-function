@@ -55,7 +55,7 @@ public class RequestTranslator {
                            .body(om.writeValueAsString(paymentPositions))
                            .build();
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("An error occurred during the request generation from payment positions");
         }
     }
 
@@ -69,7 +69,7 @@ public class RequestTranslator {
                            .body(om.writeValueAsString(multipleIUPD))
                            .build();
         } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("An error occurred during the request generation from multiple IUPD");
         }
     }
 }

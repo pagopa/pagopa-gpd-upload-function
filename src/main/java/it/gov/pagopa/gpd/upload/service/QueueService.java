@@ -18,15 +18,25 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class QueueService {
-
+    private static QueueService instance;
     private static final String GPD_SA_CONNECTION_STRING = System.getenv("GPD_SA_CONNECTION_STRING");
     private static final String VALID_POSITIONS_QUEUE = System.getenv("VALID_POSITIONS_QUEUE");
     private static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
 
-    public static boolean enqueue(String invocationId, Logger logger, String message, int initialVisibilityDelayInSeconds) {
+    public QueueService() {
+    }
+
+    public static QueueService getInstance() {
+        if (instance == null) {
+            instance = new QueueService();
+        }
+        return instance;
+    }
+
+    public boolean enqueue(String invocationId, Logger logger, String message, int initialVisibilityDelayInSeconds) {
         try {
             CloudQueue queue = CloudStorageAccount.parse(GPD_SA_CONNECTION_STRING).createCloudQueueClient()
-                                       .getQueueReference(VALID_POSITIONS_QUEUE);
+                                       .getQueueReference(VALID_POSITIONS_QUEUE); // todo: move in the constructor
             CloudQueueMessage cloudQueueMessage = new CloudQueueMessage(message);
 
             logger.log(Level.INFO, () -> String.format("[id=%s][QueueService] Add message of length %s to queue %s", invocationId, message.length(), VALID_POSITIONS_QUEUE));
@@ -39,7 +49,7 @@ public class QueueService {
         return true;
     }
 
-    public static QueueMessage.QueueMessageBuilder generateMessageBuilder(CRUDOperation operation, String uploadKey, String orgFiscalCode, String brokerCode) {
+    public QueueMessage.QueueMessageBuilder generateMessageBuilder(CRUDOperation operation, String uploadKey, String orgFiscalCode, String brokerCode) {
         return QueueMessage.builder()
                        .crudOperation(operation)
                        .uploadKey(uploadKey)
@@ -48,7 +58,7 @@ public class QueueService {
                        .retryCounter(0);
     }
 
-    public static boolean enqueueDeleteMessage(ExecutionContext ctx, ObjectMapper om, List<String> IUPDList, QueueMessage.QueueMessageBuilder builder, int delay) {
+    public boolean enqueueDeleteMessage(ExecutionContext ctx, ObjectMapper om, List<String> IUPDList, QueueMessage.QueueMessageBuilder builder, int delay) {
         for (int i = 0; i < IUPDList.size(); i += CHUNK_SIZE) {
             List<String> IUPDSubList = IUPDList.subList(i, Math.min(i + CHUNK_SIZE, IUPDList.size()));
             QueueMessage message = builder.paymentPositionIUPDs(IUPDSubList).build();
@@ -63,7 +73,7 @@ public class QueueService {
         return true;
     }
 
-    public static boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay) {
+    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay) {
         for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
             List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + CHUNK_SIZE, paymentPositions.size()));
             QueueMessage message = builder.paymentPositions(positionSubList).build();
