@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 public class OperationService {
     private static final Integer MAX_RETRY =
-            System.getenv("MAX_RETRY") != null ? Integer.parseInt(System.getenv("MAX_RETRY")) : 1;
+            System.getenv("MAX_RETRY") != null ? Integer.parseInt(System.getenv("MAX_RETRY")) : 2;
     private static final Integer RETRY_DELAY =
             System.getenv("RETRY_DELAY_IN_SECONDS") != null ? Integer.parseInt(System.getenv("RETRY_DELAY_IN_SECONDS")) : 300;
 
