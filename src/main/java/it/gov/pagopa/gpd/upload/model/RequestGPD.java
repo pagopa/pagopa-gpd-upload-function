@@ -15,8 +15,6 @@ public class RequestGPD {
     private Mode mode;
     private String orgFiscalCode;
     private String body;
-    private Logger logger;
-    private String invocationId;
 
     public enum Mode {
         BULK,

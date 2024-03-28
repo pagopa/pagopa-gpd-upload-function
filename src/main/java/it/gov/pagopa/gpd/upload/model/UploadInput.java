@@ -15,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 @Data
 public class UploadInput {
-    private UploadOperation operation;
+    private CRUDOperation operation;
     @Valid
     private List<@Valid PaymentPosition> paymentPositions;
 
@@ -33,8 +33,8 @@ public class UploadInput {
     public boolean validOneOf() {
         // check if both list are not null, in this case one of requirement is not met
         boolean xorNotNull = paymentPositions != null ^ paymentPositionIUPDs != null;
-        boolean wrongDeleteMapping = UploadOperation.DELETE.equals(operation) && paymentPositionIUPDs == null;
-        boolean wrongCreateUpdateMapping = !UploadOperation.DELETE.equals(operation) && paymentPositions == null;
+        boolean wrongDeleteMapping = CRUDOperation.DELETE.equals(operation) && paymentPositionIUPDs == null;
+        boolean wrongCreateUpdateMapping = !CRUDOperation.DELETE.equals(operation) && paymentPositions == null;
 
         return xorNotNull && !wrongDeleteMapping && !wrongCreateUpdateMapping;
     }

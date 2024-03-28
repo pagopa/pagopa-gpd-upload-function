@@ -8,7 +8,10 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.client.GPDClient;
-import it.gov.pagopa.gpd.upload.entity.UploadMessage;
+import it.gov.pagopa.gpd.upload.entity.DeleteMessage;
+import it.gov.pagopa.gpd.upload.entity.PositionMessage;
+import it.gov.pagopa.gpd.upload.entity.UpsertMessage;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
@@ -36,10 +39,11 @@ public class ServiceFunction {
         String invocationId = ctx.getInvocationId();
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+        ctx.getLogger().log(Level.INFO, "Message: " + message);
 
         try {
-            UploadMessage msg = objectMapper.readValue(message, UploadMessage.class);
-            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient());
+            QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
+            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
             getOperationService(ctx, method, msg).processBulkRequest();
 
             // check if upload is completed
@@ -63,23 +67,30 @@ public class ServiceFunction {
         BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), broker, fiscalCode, uploadKey + ".json");
     }
 
-    private Function<RequestGPD, ResponseGPD> getMethod(UploadMessage msg, GPDClient gpdClient) {
-        return switch (msg.getUploadOperation()) {
+    private Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {
+        return switch (msg.getCrudOperation()) {
             case CREATE -> gpdClient::createDebtPosition;
             case UPDATE -> gpdClient::updateDebtPosition;
             case DELETE -> gpdClient::deleteDebtPosition;
         };
     }
 
-    private OperationService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, UploadMessage message) {
-        return new OperationService(ctx, method, message);
+    private OperationService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, QueueMessage queueMessage) {
+        return new OperationService(ctx, method, getPositionMessage(queueMessage));
+    }
+
+    private PositionMessage getPositionMessage(QueueMessage queueMessage) {
+        return switch (queueMessage.getCrudOperation()) {
+            case CREATE, UPDATE -> new UpsertMessage(queueMessage);
+            case DELETE -> new DeleteMessage(queueMessage);
+        };
     }
 
     public StatusService getStatusService(ExecutionContext ctx) {
         return StatusService.getInstance(ctx.getLogger());
     }
 
-    public GPDClient getGPDClient() {
-        return GPDClient.getInstance();
+    public GPDClient getGPDClient(ExecutionContext context) {
+        return GPDClient.getInstance(context.getLogger());
     }
 }

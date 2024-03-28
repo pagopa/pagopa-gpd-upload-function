@@ -1,6 +1,6 @@
 package it.gov.pagopa.gpd.upload.model;
 
-public enum UploadOperation {
+public enum CRUDOperation {
     CREATE,
     UPDATE,
     DELETE

@@ -3,7 +3,7 @@ package it.gov.pagopa.gpd.upload.functions.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import it.gov.pagopa.gpd.upload.model.UploadOperation;
+import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
@@ -66,7 +66,7 @@ public class InputGenerator {
                                                          .build();
 
         UploadInput input = UploadInput.builder()
-                                    .operation(UploadOperation.CREATE)
+                                    .operation(CRUDOperation.CREATE)
                                     .paymentPositions(paymentPositions.getPaymentPositions())
                                     .build();
 

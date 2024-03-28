@@ -1,6 +1,5 @@
-package it.gov.pagopa.gpd.upload.entity;
+package it.gov.pagopa.gpd.upload.model;
 
-import it.gov.pagopa.gpd.upload.model.UploadOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import lombok.*;
 
@@ -11,8 +10,8 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UploadMessage {
-    private UploadOperation uploadOperation;
+public class QueueMessage {
+    private CRUDOperation crudOperation;
     private String uploadKey;
     private String organizationFiscalCode;
     private String brokerCode;

@@ -30,13 +30,15 @@ public class GPDClient {
     private static final String GPD_SUBSCRIPTION_KEY = System.getenv("GPD_SUBSCRIPTION_KEY");
     private static final String TO_PUBLISH_QUERY_PARAM = "toPublish";
     private static final boolean TO_PUBLISH_QUERY_VALUE = true;
+    private Logger logger;
 
-    public GPDClient() {
+    public GPDClient(Logger logger) {
+        this.logger = logger;
     }
 
-    public static GPDClient getInstance() {
+    public static GPDClient getInstance(Logger logger) {
         if (instance == null) {
-            instance = new GPDClient();
+            instance = new GPDClient(logger);
         }
         return instance;
     }
@@ -58,7 +60,7 @@ public class GPDClient {
 
     private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
         try {
-            Response response = callGPD(method.name(), path, req.getBody(), req.getLogger());
+            Response response = callGPD(method.name(), path, req.getBody());
             return mapResponse(response);
         } catch (JsonProcessingException e) {
             return ResponseGPD.builder()
@@ -68,7 +70,7 @@ public class GPDClient {
         }
     }
 
-    private Response callGPD(String httpMethod, String url, String body, Logger logger) {
+    private Response callGPD(String httpMethod, String url, String body) {
         Client client = ClientBuilder.newClient();
         String requestId = UUID.randomUUID().toString();
         try {
@@ -79,12 +81,10 @@ public class GPDClient {
                                                  .header(HEADER_REQUEST_ID, requestId);
 
             Response response = builder.method(httpMethod, Entity.json(body));
-            logger.log(Level.INFO, () -> String.format(
-                    "[requestId=%s][%sDebtPositions] Response: %s", requestId, httpMethod, response.getStatus()));
+            logger.log(Level.INFO, () -> String.format("[requestId=%s][%sDebtPositions] Response: %s", requestId, httpMethod, response.getStatus()));
             return response;
         } catch (Exception e) {
-            logger.log(Level.WARNING, () -> String.format(
-                    "[requestId=%s][%sDebtPositions] Exception: %s", requestId, httpMethod, e.getMessage()));
+            logger.log(Level.WARNING, () -> String.format("[requestId=%s][%sDebtPositions] Exception: %s", requestId, httpMethod, e.getMessage()));
             return Response.serverError().build();
         }
     }

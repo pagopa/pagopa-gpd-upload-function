@@ -7,8 +7,8 @@ import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.queue.CloudQueue;
 import com.microsoft.azure.storage.queue.CloudQueueMessage;
-import it.gov.pagopa.gpd.upload.entity.UploadMessage;
-import it.gov.pagopa.gpd.upload.model.UploadOperation;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
+import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 
 import java.net.URISyntaxException;
@@ -39,19 +39,19 @@ public class QueueService {
         return true;
     }
 
-    public static UploadMessage.UploadMessageBuilder generateMessageBuilder(UploadOperation operation, String uploadKey, String orgFiscalCode, String brokerCode) {
-        return UploadMessage.builder()
-                       .uploadOperation(operation)
+    public static QueueMessage.QueueMessageBuilder generateMessageBuilder(CRUDOperation operation, String uploadKey, String orgFiscalCode, String brokerCode) {
+        return QueueMessage.builder()
+                       .crudOperation(operation)
                        .uploadKey(uploadKey)
                        .organizationFiscalCode(orgFiscalCode)
                        .brokerCode(brokerCode)
                        .retryCounter(0);
     }
 
-    public static boolean enqueueDeleteMessage(ExecutionContext ctx, ObjectMapper om, List<String> IUPDList, UploadMessage.UploadMessageBuilder builder, int delay) {
+    public static boolean enqueueDeleteMessage(ExecutionContext ctx, ObjectMapper om, List<String> IUPDList, QueueMessage.QueueMessageBuilder builder, int delay) {
         for (int i = 0; i < IUPDList.size(); i += CHUNK_SIZE) {
             List<String> IUPDSubList = IUPDList.subList(i, Math.min(i + CHUNK_SIZE, IUPDList.size()));
-            UploadMessage message = builder.paymentPositionIUPDs(IUPDSubList).build();
+            QueueMessage message = builder.paymentPositionIUPDs(IUPDSubList).build();
 
             try {
                 enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(message), delay);
@@ -63,10 +63,10 @@ public class QueueService {
         return true;
     }
 
-    public static boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, UploadMessage.UploadMessageBuilder builder, int delay) {
+    public static boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay) {
         for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
             List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + CHUNK_SIZE, paymentPositions.size()));
-            UploadMessage message = builder.paymentPositions(positionSubList).build();
+            QueueMessage message = builder.paymentPositions(positionSubList).build();
             try {
                 enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(message), delay);
             } catch (JsonProcessingException e) {

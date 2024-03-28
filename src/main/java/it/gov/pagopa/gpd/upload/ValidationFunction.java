@@ -13,10 +13,10 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.entity.Status;
-import it.gov.pagopa.gpd.upload.entity.UploadMessage;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
-import it.gov.pagopa.gpd.upload.model.UploadOperation;
+import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
@@ -143,8 +143,8 @@ public class ValidationFunction {
         return status;
     }
 
-    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, UploadOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
-        UploadMessage.UploadMessageBuilder builder = QueueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
+    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
+        QueueMessage.QueueMessageBuilder builder = QueueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
         return switch (operation) {
             case CREATE, UPDATE -> QueueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
             case DELETE -> QueueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
