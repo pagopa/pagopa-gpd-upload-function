@@ -75,7 +75,7 @@ public class ServiceFunction {
     }
 
     private OperationService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, PositionMessage positionMessage) {
-        return new OperationService(ctx, method, positionMessage);
+        return new OperationService(ctx, method, positionMessage, getStatusService(ctx));
     }
 
     private PositionMessage getPositionMessage(QueueMessage queueMessage) {
