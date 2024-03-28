@@ -13,6 +13,7 @@ import org.mockito.Mockito;
 import java.util.List;
 import java.util.logging.Logger;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 public class QueueServiceTest {
@@ -34,6 +35,17 @@ public class QueueServiceTest {
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
         Assertions.assertTrue(new EQueueService().enqueueDeleteMessage(context, om, List.of("IUPD-1"), builder, 0));
+    }
+
+    @Test
+    void testException() {
+        when(context.getLogger()).thenReturn(Logger.getLogger("gpd-upload-test-logger"));
+        QueueMessage.QueueMessageBuilder builder = QueueService.getInstance().generateMessageBuilder(CRUDOperation.DELETE, "key", "orgFiscalCode", "brokerCode");
+        ObjectMapper om = new ObjectMapper();
+        om.registerModule(new JavaTimeModule());
+        assertThrows(IllegalArgumentException.class, () -> {
+            QueueService.getInstance().enqueueDeleteMessage(context, om, List.of("IUPD-1"), builder, 0);
+        });
     }
 
     public class EQueueService extends QueueService {
