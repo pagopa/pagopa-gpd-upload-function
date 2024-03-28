@@ -163,4 +163,26 @@ public class TestUtil {
                                     .build());
         return responseEntries;
     }
+
+    public QueueMessage getDeleteQueueMessage() {
+        return QueueMessage.builder()
+                       .crudOperation(CRUDOperation.DELETE)
+                       .organizationFiscalCode("mock")
+                       .brokerCode("mock")
+                       .uploadKey("mock")
+                       .retryCounter(0)
+                       .paymentPositionIUPDs(List.of("IUPD-1"))
+                       .build();
+    }
+
+    public QueueMessage getCreateQueueMessage() {
+        return QueueMessage.builder()
+                       .crudOperation(CRUDOperation.CREATE)
+                       .organizationFiscalCode("mock")
+                       .brokerCode("mock")
+                       .uploadKey("mock")
+                       .retryCounter(0)
+                       .paymentPositions(List.of(TestUtil.getMockDebtPosition()))
+                       .build();
+    }
 }
