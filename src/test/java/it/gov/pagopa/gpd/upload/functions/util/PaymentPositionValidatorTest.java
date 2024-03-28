@@ -36,7 +36,7 @@ public class PaymentPositionValidatorTest {
     void runOK() throws AppException {
         doNothing().when(statusService).updateStatus(any(), any(), any(), any());
         // Run method
-        PaymentPositionValidator.validate(context, statusService, getMockDebtPositions(),"mockFiscalCode", "mockUploadKey");
+        PaymentPositionValidator.validate(context, getMockDebtPositions().getPaymentPositions(),"mockFiscalCode", "mockUploadKey");
         //Assertion
         assertTrue(true);
     }
@@ -45,7 +45,7 @@ public class PaymentPositionValidatorTest {
     void runKO() throws AppException {
         doNothing().when(statusService).updateStatus(any(), any(), any(), any());
         // Run method
-        PaymentPositionValidator.validate(context, statusService, getMockInvalidDebtPositions(),"mockFiscalCode", "mockUploadKey");
+        PaymentPositionValidator.validate(context, getMockInvalidDebtPositions().getPaymentPositions(),"mockFiscalCode", "mockUploadKey");
         //Assertion
         assertTrue(true);
     }

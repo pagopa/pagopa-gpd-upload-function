@@ -17,7 +17,7 @@
         <azure.functions.java.library.version>3.0.0</azure.functions.java.library.version>
         <functionAppName>com.microsoft.azure-20220215182005862</functionAppName>
         <resteasy.version>3.15.3.Final</resteasy.version>
-        <lombok.version>1.18.24</lombok.version>
+        <lombok.version>1.18.30</lombok.version>
         <azure.eventgrid.version>4.20.1</azure.eventgrid.version>
         <azure.cosmos.version>4.54.0</azure.cosmos.version>
         <azure.storage.blob.version>12.25.1</azure.storage.blob.version>
@@ -125,7 +125,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.20</version>
+            <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
 
