@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 @Getter
 @Setter
-public class UpsertMessage extends PositionMessage {
+public class UpsertMessage extends DebtPositionMessage {
     private List<PaymentPosition> paymentPositions;
 
     public UpsertMessage(QueueMessage m) {

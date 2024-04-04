@@ -1,4 +1,4 @@
-package it.gov.pagopa.gpd.upload.functions.utils;
+package it.gov.pagopa.gpd.upload.functions.util;
 
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;

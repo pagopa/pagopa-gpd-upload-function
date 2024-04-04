@@ -12,7 +12,7 @@ import java.util.Optional;
 
 @Getter
 @Setter
-public class DeleteMessage extends PositionMessage {
+public class DeleteMessage extends DebtPositionMessage {
     private List<String> paymentPositionIUPDs;
 
     public DeleteMessage(QueueMessage m) {

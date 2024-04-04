@@ -9,7 +9,7 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.client.GPDClient;
 import it.gov.pagopa.gpd.upload.entity.DeleteMessage;
-import it.gov.pagopa.gpd.upload.entity.PositionMessage;
+import it.gov.pagopa.gpd.upload.entity.DebtPositionMessage;
 import it.gov.pagopa.gpd.upload.entity.UpsertMessage;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
@@ -17,7 +17,7 @@ import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
-import it.gov.pagopa.gpd.upload.service.OperationService;
+import it.gov.pagopa.gpd.upload.service.CRUDService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.MapUtils;
 
@@ -43,7 +43,7 @@ public class ServiceFunction {
         try {
             QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
             Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
-            getOperationService(ctx, method, getPositionMessage(msg)).processBulkRequest();
+            getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
 
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, msg.getOrganizationFiscalCode(), msg.getUploadKey());
@@ -74,11 +74,11 @@ public class ServiceFunction {
         };
     }
 
-    private OperationService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, PositionMessage positionMessage) {
-        return new OperationService(ctx, method, positionMessage, getStatusService(ctx));
+    private CRUDService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage debtPositionMessage) {
+        return new CRUDService(ctx, method, debtPositionMessage, getStatusService(ctx));
     }
 
-    private PositionMessage getPositionMessage(QueueMessage queueMessage) {
+    private DebtPositionMessage getPositionMessage(QueueMessage queueMessage) {
         return switch (queueMessage.getCrudOperation()) {
             case CREATE, UPDATE -> new UpsertMessage(queueMessage);
             case DELETE -> new DeleteMessage(queueMessage);

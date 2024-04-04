@@ -5,18 +5,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import it.gov.pagopa.gpd.upload.entity.DeleteMessage;
 import it.gov.pagopa.gpd.upload.entity.UpsertMessage;
-import it.gov.pagopa.gpd.upload.functions.utils.TestUtil;
-import it.gov.pagopa.gpd.upload.model.CRUDOperation;
-import it.gov.pagopa.gpd.upload.model.QueueMessage;
+import it.gov.pagopa.gpd.upload.functions.util.TestUtil;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.pd.MultipleIUPD;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
-import it.gov.pagopa.gpd.upload.service.MessageTranslator;
 import it.gov.pagopa.gpd.upload.service.RequestTranslator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Optional;
 
 public class RequestTranslatorTest {

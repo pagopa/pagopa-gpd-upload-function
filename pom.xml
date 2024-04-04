@@ -22,6 +22,7 @@
         <azure.cosmos.version>4.54.0</azure.cosmos.version>
         <azure.storage.blob.version>12.25.1</azure.storage.blob.version>
         <azure.storage.version>8.6.6</azure.storage.version>
+        <testcontainers.junit.jupiter>1.19.7</testcontainers.junit.jupiter>
     </properties>
 
     <dependencies>
@@ -54,6 +55,12 @@
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${testcontainers.junit.jupiter}</version>
             <scope>test</scope>
         </dependency>
         <dependency>

@@ -20,30 +20,41 @@ import java.util.logging.Logger;
 public class QueueService {
     private static QueueService instance;
     private static final String GPD_SA_CONNECTION_STRING = System.getenv("GPD_SA_CONNECTION_STRING");
-    private static final String VALID_POSITIONS_QUEUE = System.getenv("VALID_POSITIONS_QUEUE");
+    private static final String VALID_POSITIONS_QUEUE =
+            System.getenv("VALID_POSITIONS_QUEUE") != null ? System.getenv("VALID_POSITIONS_QUEUE") : "VALID_POSITIONS_QUEUE";
     private static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
+    private CloudQueue cloudQueue;
+    private Logger logger;
 
-    public QueueService() {
+    public QueueService(Logger logger) {
+        try {
+            this.logger = logger;
+            cloudQueue = CloudStorageAccount.parse(GPD_SA_CONNECTION_STRING).createCloudQueueClient()
+                            .getQueueReference(VALID_POSITIONS_QUEUE);
+        } catch (URISyntaxException | StorageException | InvalidKeyException e) {
+            logger.log(Level.SEVERE, () -> String.format("[QueueService] Processing function exception: %s, caused by: %s", e.getMessage(), e.getCause()));
+        }
     }
 
-    public static QueueService getInstance() {
+    public QueueService(Logger logger, CloudQueue cloudQueue) {
+        this.logger = logger;
+        this.cloudQueue = cloudQueue;
+    }
+
+    public static QueueService getInstance(Logger logger) {
         if (instance == null) {
-            instance = new QueueService();
+            instance = new QueueService(logger);
         }
         return instance;
     }
 
-    public boolean enqueue(String invocationId, Logger logger, String message, int initialVisibilityDelayInSeconds) {
+    public boolean enqueue(String invocationId, String message, int initialVisibilityDelayInSeconds) {
         try {
-            CloudQueue queue = CloudStorageAccount.parse(GPD_SA_CONNECTION_STRING).createCloudQueueClient()
-                                       .getQueueReference(VALID_POSITIONS_QUEUE); // todo: move in the constructor
-            CloudQueueMessage cloudQueueMessage = new CloudQueueMessage(message);
-
             logger.log(Level.INFO, () -> String.format("[id=%s][QueueService] Add message of length %s to queue %s", invocationId, message.length(), VALID_POSITIONS_QUEUE));
-
+            CloudQueueMessage cloudQueueMessage = new CloudQueueMessage(message);
             // timeToLiveInSeconds = 0 is default -> 7 days
-            queue.addMessage(cloudQueueMessage, 0, initialVisibilityDelayInSeconds, null, null);
-        } catch (URISyntaxException | StorageException | InvalidKeyException e) {
+            cloudQueue.addMessage(cloudQueueMessage, 0, initialVisibilityDelayInSeconds, null, null);
+        } catch (StorageException e) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
         }
         return true;
@@ -64,7 +75,7 @@ public class QueueService {
             QueueMessage message = builder.paymentPositionIUPDs(IUPDSubList).build();
 
             try {
-                enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(message), delay);
+                enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
             } catch (JsonProcessingException e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;
@@ -78,7 +89,7 @@ public class QueueService {
             List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + CHUNK_SIZE, paymentPositions.size()));
             QueueMessage message = builder.paymentPositions(positionSubList).build();
             try {
-                enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(message), delay);
+                enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
             } catch (JsonProcessingException e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;

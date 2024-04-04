@@ -15,7 +15,7 @@ import java.util.Optional;
 @AllArgsConstructor
 @Getter
 @Setter
-public abstract class PositionMessage {
+public abstract class DebtPositionMessage {
     private CRUDOperation crudOperation;
     private String uploadKey;
     private String organizationFiscalCode;
@@ -27,5 +27,4 @@ public abstract class PositionMessage {
     public abstract RequestGPD getRequest(RequestTranslator requestTranslator, RequestGPD.Mode mode, Optional<String> optIUPD);
 
     public abstract QueueMessage getQueueMessage(MessageTranslator messageTranslator, List<String> filterByIUPD);
-
 }

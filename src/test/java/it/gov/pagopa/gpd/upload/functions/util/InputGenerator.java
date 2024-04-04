@@ -1,4 +1,4 @@
-package it.gov.pagopa.gpd.upload.functions.utils;
+package it.gov.pagopa.gpd.upload.functions.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -20,8 +20,8 @@ import java.util.*;
 public class InputGenerator {
     public static void main(String[] args) throws IOException {
         int N = 3; // debt position number target
-        String fiscalCode = "NFHCJ78D4ENCJADSA";
-        String testType = "UPDATE_TEST";
+        String fiscalCode = "77777777777";
+        String testType = "TEST_TYPE";
         List<PaymentPosition> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
             String ID = fiscalCode + "_" + UUID.randomUUID().toString().substring(0,10);
@@ -33,7 +33,7 @@ public class InputGenerator {
                                        .iban("IT0000000000000000000000000")
                                        .transferMetadata(new ArrayList<>())
                                        .build();
-            List<Transfer> transferList = new ArrayList<Transfer>();
+            List<Transfer> transferList = new ArrayList<>();
             transferList.add(tf);
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.now().plus(1, ChronoUnit.DAYS), ZoneId.of("UTC"));
             PaymentOption po = PaymentOption.builder()
@@ -45,7 +45,7 @@ public class InputGenerator {
                                         .transfer(transferList)
                                         .paymentOptionMetadata(new ArrayList<>())
                                         .build();
-            List<PaymentOption> paymentOptionList = new ArrayList<PaymentOption>();
+            List<PaymentOption> paymentOptionList = new ArrayList<>();
             paymentOptionList.add(po);
             PaymentPosition pp = PaymentPosition.builder()
                                         .iupd("IUPD_" + ID + "_" + testType)

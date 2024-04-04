@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.logging.Logger;
 
-import static it.gov.pagopa.gpd.upload.functions.utils.TestUtil.*;
+import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;

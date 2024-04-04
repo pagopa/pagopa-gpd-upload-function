@@ -17,7 +17,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Logger;
 
-import static it.gov.pagopa.gpd.upload.functions.utils.TestUtil.*;
+import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;

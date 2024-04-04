@@ -67,7 +67,7 @@ public class ValidationFunction {
                 logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] Blob event subject: %s", context.getInvocationId(), event.getSubject()));
 
 
-                Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-]+\\.json)");
+                Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-]+\\.[Jj][Ss][Oo][Nn])");
                 Matcher matcher = pattern.matcher(event.getSubject());
 
                 // Check if the pattern is found
@@ -144,10 +144,10 @@ public class ValidationFunction {
     }
 
     public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
-        QueueMessage.QueueMessageBuilder builder = QueueService.getInstance().generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
+        QueueMessage.QueueMessageBuilder builder = QueueService.getInstance(ctx.getLogger()).generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
         return switch (operation) {
-            case CREATE, UPDATE -> QueueService.getInstance().enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
-            case DELETE -> QueueService.getInstance().enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
+            case CREATE, UPDATE -> QueueService.getInstance(ctx.getLogger()).enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
+            case DELETE -> QueueService.getInstance(ctx.getLogger()).enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
         };
     }
 }

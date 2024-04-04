@@ -2,14 +2,12 @@ package it.gov.pagopa.gpd.upload.functions.service;
 
 import it.gov.pagopa.gpd.upload.entity.DeleteMessage;
 import it.gov.pagopa.gpd.upload.entity.UpsertMessage;
-import it.gov.pagopa.gpd.upload.functions.utils.TestUtil;
-import it.gov.pagopa.gpd.upload.model.CRUDOperation;
+import it.gov.pagopa.gpd.upload.functions.util.TestUtil;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.service.MessageTranslator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 

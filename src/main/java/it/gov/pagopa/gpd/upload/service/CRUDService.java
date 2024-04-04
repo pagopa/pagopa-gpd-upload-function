@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
-import it.gov.pagopa.gpd.upload.entity.PositionMessage;
+import it.gov.pagopa.gpd.upload.entity.DebtPositionMessage;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.*;
@@ -17,20 +17,20 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-public class OperationService {
+public class CRUDService {
     private static final Integer MAX_RETRY =
             System.getenv("MAX_RETRY") != null ? Integer.parseInt(System.getenv("MAX_RETRY")) : 2;
     private static final Integer RETRY_DELAY =
             System.getenv("RETRY_DELAY_IN_SECONDS") != null ? Integer.parseInt(System.getenv("RETRY_DELAY_IN_SECONDS")) : 300;
 
-    private ObjectMapper om;
-    private PositionMessage positionMessage;
-    private Function<RequestGPD, ResponseGPD> method;
-    private StatusService statusService;
-    private ExecutionContext ctx;
+    private final ObjectMapper om;
+    private final DebtPositionMessage debtPositionMessage;
+    private final Function<RequestGPD, ResponseGPD> method;
+    private final StatusService statusService;
+    private final ExecutionContext ctx;
 
-    public OperationService(ExecutionContext context, Function<RequestGPD, ResponseGPD> method, PositionMessage message, StatusService statusService) {
-        this.positionMessage = message;
+    public CRUDService(ExecutionContext context, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage message, StatusService statusService) {
+        this.debtPositionMessage = message;
         this.method = method;
         this.ctx = context;
         this.statusService = statusService;
@@ -44,30 +44,30 @@ public class OperationService {
     }
 
     // constraint: paymentPositions size less than max bulk item per call -> compliant by design(max queue message = 64KB = ~30 PaymentPosition)
-    public void processBulkRequest() throws AppException, JsonProcessingException {
+    public void processRequestInBulk() throws AppException, JsonProcessingException {
         ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Process request in BULK", ctx.getInvocationId()));
 
-        RequestGPD requestGPD = positionMessage.getRequest(RequestTranslator.getInstance(), RequestGPD.Mode.BULK, Optional.empty());
-        List<String> IUPDList = positionMessage.getIUPDList();
+        RequestGPD requestGPD = debtPositionMessage.getRequest(RequestTranslator.getInstance(), RequestGPD.Mode.BULK, Optional.empty());
+        List<String> IUPDList = debtPositionMessage.getIUPDList();
         ResponseGPD response = applyRequest(requestGPD);
 
         if(!response.is2xxSuccessful()) {
             // if BULK creation wasn't successful, switch to single debt position creation
-            Map<String, ResponseGPD> responseByIUPD = processSingleRequest(IUPDList);
+            Map<String, ResponseGPD> responseByIUPD = processRequestOneByOne(IUPDList);
             ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Call Status update for %s IUPDs", ctx.getInvocationId(), responseByIUPD.keySet().size()));
-            statusService.appendResponses(ctx.getInvocationId(), positionMessage.getOrganizationFiscalCode(), positionMessage.getUploadKey(), responseByIUPD);
+            statusService.appendResponses(ctx.getInvocationId(), debtPositionMessage.getOrganizationFiscalCode(), debtPositionMessage.getUploadKey(), responseByIUPD);
         } else {
             // if BULK creation was successful
-            statusService.appendResponse(ctx.getInvocationId(), positionMessage.getOrganizationFiscalCode(), positionMessage.getUploadKey(), IUPDList, response);
+            statusService.appendResponse(ctx.getInvocationId(), debtPositionMessage.getOrganizationFiscalCode(), debtPositionMessage.getUploadKey(), IUPDList, response);
         }
     }
 
-    private Map<String, ResponseGPD> processSingleRequest(List<String> IUPDList) throws JsonProcessingException {
+    private Map<String, ResponseGPD> processRequestOneByOne(List<String> IUPDList) throws JsonProcessingException {
         ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Single mode processing", ctx.getInvocationId()));
         Map<String, ResponseGPD> responseByIUPD = new HashMap<>();
 
         for(String IUPD: IUPDList) {
-            RequestGPD requestGPD = positionMessage.getRequest(RequestTranslator.getInstance(), RequestGPD.Mode.SINGLE, Optional.of(IUPD));
+            RequestGPD requestGPD = debtPositionMessage.getRequest(RequestTranslator.getInstance(), RequestGPD.Mode.SINGLE, Optional.of(IUPD));
             ResponseGPD response = applyRequest(requestGPD);
             responseByIUPD.put(IUPD, response);
         }
@@ -77,23 +77,20 @@ public class OperationService {
                                                           .filter(entry -> entry.getValue().getRetryStep().equals(RetryStep.RETRY))
                                                           .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
-        if (!retryResponses.isEmpty() && positionMessage.getRetryCounter() < MAX_RETRY) {
+        if (!retryResponses.isEmpty() && debtPositionMessage.getRetryCounter() < MAX_RETRY) {
             // Remove retry-responses from response-map and enqueue retry-responses
             responseByIUPD.entrySet().removeAll(retryResponses.entrySet());
-            this.retry(updateMessageForRetry(retryResponses));
+            this.retry(retryResponses);
         }
 
         return responseByIUPD;
     }
 
-    private QueueMessage updateMessageForRetry(Map<String, ResponseGPD> retryResponse) {
-        positionMessage.setRetryCounter(positionMessage.getRetryCounter()+1);
+    public boolean retry(Map<String, ResponseGPD> retryResponse) throws JsonProcessingException {
+        debtPositionMessage.setRetryCounter(debtPositionMessage.getRetryCounter()+1);
         List<String> retryIUPD = retryResponse.keySet().stream().toList();
-        return positionMessage.getQueueMessage(MessageTranslator.getInstance(), retryIUPD);
-    }
-
-    public boolean retry(QueueMessage msg) throws JsonProcessingException {
-        ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Retry!", ctx.getInvocationId()));
-        return QueueService.getInstance().enqueue(ctx.getInvocationId(), ctx.getLogger(), om.writeValueAsString(msg), RETRY_DELAY);
+        QueueMessage queueMessage = debtPositionMessage.getQueueMessage(MessageTranslator.getInstance(), retryIUPD);
+        ctx.getLogger().log(Level.INFO, () -> String.format("[id=%s][OperationService] Retry message %s", ctx.getInvocationId(), queueMessage.getUploadKey()));
+        return QueueService.getInstance(ctx.getLogger()).enqueue(ctx.getInvocationId(), om.writeValueAsString(queueMessage), RETRY_DELAY);
     }
 }
