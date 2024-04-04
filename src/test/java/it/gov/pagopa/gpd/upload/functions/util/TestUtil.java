@@ -1,11 +1,11 @@
-package it.gov.pagopa.gpd.upload.functions.utils;
+package it.gov.pagopa.gpd.upload.functions.util;
 
 import com.microsoft.azure.functions.HttpStatus;
-import it.gov.pagopa.gpd.upload.entity.UploadMessage;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
-import it.gov.pagopa.gpd.upload.model.UploadOperation;
+import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
@@ -25,7 +25,7 @@ import java.util.UUID;
 public class TestUtil {
     public static UploadInput getMockCreateInputData() {
         return UploadInput.builder()
-                .uploadOperation(UploadOperation.CREATE)
+                .operation(CRUDOperation.CREATE)
                 .paymentPositions(getMockDebtPositions().getPaymentPositions())
                 .build();
     }
@@ -55,6 +55,7 @@ public class TestUtil {
                 .companyName(UUID.randomUUID().toString().substring(0, 4))
                 .officeName(UUID.randomUUID().toString().substring(0, 4))
                 .paymentOption(List.of(getMockPaymentOption()))
+                .switchToExpired(false)
                 .build();
     }
 
@@ -67,6 +68,7 @@ public class TestUtil {
                        .companyName(UUID.randomUUID().toString().substring(0, 4))
                        .officeName(UUID.randomUUID().toString().substring(0, 4))
                        .email("invalid-email")
+                       .switchToExpired(false)
                        .paymentOption(List.of(getMockPaymentOption()))
                        .build();
     }
@@ -77,6 +79,7 @@ public class TestUtil {
                 .iuv("IUV_77777777777_92bd6")
                 .amount(100L)
                 .isPartialPayment(false)
+                .description("description")
                 .dueDate(LocalDateTime.now().plusYears(1L))
                 .fee(0L)
                 .notificationFee(0L)
@@ -139,14 +142,14 @@ public class TestUtil {
         return responseGPD;
     }
 
-    public static UploadMessage getMockInputMessage(UploadOperation uploadOperation) {
-        UploadMessage message = UploadMessage.builder()
-                                        .uploadOperation(uploadOperation)
+    public static QueueMessage getMockInputMessage(CRUDOperation uploadOperation) {
+        QueueMessage message = QueueMessage.builder()
+                                        .crudOperation(uploadOperation)
                                         .uploadKey("uploadKey")
                                         .brokerCode("brokerCode")
                                         .organizationFiscalCode("organizationFiscalCode")
                                         .retryCounter(0)
-                                        .paymentPositions(TestUtil.getMockDebtPositions())
+                                        // todo .paymentPositions(TestUtil.getMockDebtPositions())
                                         .build();
         return message;
     }
@@ -159,5 +162,27 @@ public class TestUtil {
                                     .statusMessage("status message")
                                     .build());
         return responseEntries;
+    }
+
+    public QueueMessage getDeleteQueueMessage() {
+        return QueueMessage.builder()
+                       .crudOperation(CRUDOperation.DELETE)
+                       .organizationFiscalCode("mock")
+                       .brokerCode("mock")
+                       .uploadKey("mock")
+                       .retryCounter(0)
+                       .paymentPositionIUPDs(List.of("IUPD-1"))
+                       .build();
+    }
+
+    public QueueMessage getCreateQueueMessage() {
+        return QueueMessage.builder()
+                       .crudOperation(CRUDOperation.CREATE)
+                       .organizationFiscalCode("mock")
+                       .brokerCode("mock")
+                       .uploadKey("mock")
+                       .retryCounter(0)
+                       .paymentPositions(List.of(TestUtil.getMockDebtPosition()))
+                       .build();
     }
 }

@@ -12,17 +12,16 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
-import it.gov.pagopa.gpd.upload.entity.UploadMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
-import it.gov.pagopa.gpd.upload.model.UploadOperation;
+import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
-import it.gov.pagopa.gpd.upload.util.PaymentPositionValidator;
+import it.gov.pagopa.gpd.upload.util.GPDValidator;
 
 import java.util.List;
 import java.util.logging.Level;
@@ -35,8 +34,6 @@ import java.util.regex.Pattern;
  * Validation step act as a filter and is followed by the queuing step
  */
 public class ValidationFunction {
-
-    private static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
@@ -70,7 +67,7 @@ public class ValidationFunction {
                 logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] Blob event subject: %s", context.getInvocationId(), event.getSubject()));
 
 
-                Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-]+\\.json)");
+                Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-]+\\.[Jj][Ss][Oo][Nn])");
                 Matcher matcher = pattern.matcher(event.getSubject());
 
                 // Check if the pattern is found
@@ -94,22 +91,36 @@ public class ValidationFunction {
     }
 
     public boolean validateBlob(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, BinaryData content) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
+        int size = 0;
+        ObjectMapper om = new ObjectMapper();
+        om.registerModule(new JavaTimeModule());
+        om.disable(SerializationFeature.INDENT_OUTPUT); // remove useless whitespaces from message
 
         try {
-            // deserialize payment positions from JSON to Object
-            UploadInput uploadInput = objectMapper.readValue(content.toString(), UploadInput.class);
-            PaymentPositions pps = PaymentPositions.builder().paymentPositions(uploadInput.getPaymentPositions()).build();
-            Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, pps.getPaymentPositions().size());
+            // deserialize UploadInput from JSON to Object
+            UploadInput input = om.readValue(content.toString(), UploadInput.class);
+
+            if(!input.validOneOf()) {
+                return false;
+            }
+
+            List<PaymentPosition> pps = input.getPaymentPositions();
+            List<String> iupds = input.getPaymentPositionIUPDs();
+
+            if(pps != null)
+                size = pps.size();
+            else if(iupds != null)
+                size = iupds.size();
+
+            Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, size);
+            if(pps != null) GPDValidator.validate(ctx, pps, fiscalCode, uploadKey);
+
             if (status.getUpload().getEnd() != null) { // already exist and upload is completed, so no-retry
                 return false;
             }
-            // call payment position object validation logic
-            PaymentPositionValidator.validate(ctx, StatusService.getInstance(ctx.getLogger()), pps, fiscalCode, uploadKey);
 
-            // enqueue payment positions message by chunk size
-            this.enqueue(ctx, uploadInput.getUploadOperation(), pps.getPaymentPositions(), uploadKey, fiscalCode, broker);
+            // enqueue chunk and other input to form message
+            enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
 
             return true;
         } catch (JsonMappingException e) {
@@ -126,35 +137,17 @@ public class ValidationFunction {
         return BlobRepository.getInstance(ctx.getLogger()).download(broker, fiscalCode, filename);
     }
 
-    public Status createStatus(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, int paymentPositionSize) throws AppException {
+    public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size) throws AppException {
         Status status = StatusService.getInstance(ctx.getLogger())
-                                .createStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, paymentPositionSize);
+                                .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size);
         return status;
     }
 
-    public boolean enqueue(ExecutionContext ctx, UploadOperation uploadOperation, List<PaymentPosition> paymentPositions, String uploadKey, String fiscalCode, String broker) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
-            int endIndex = Math.min(i + CHUNK_SIZE, paymentPositions.size());
-            List<PaymentPosition> subList = paymentPositions.subList(i, endIndex);
-
-            UploadMessage message = UploadMessage.builder()
-                                            .uploadOperation(uploadOperation)
-                                            .uploadKey(uploadKey)
-                                            .organizationFiscalCode(fiscalCode)
-                                            .brokerCode(broker)
-                                            .retryCounter(0)
-                                            .paymentPositions(PaymentPositions.builder().paymentPositions(subList).build())
-                                            .build();
-            objectMapper.disable(SerializationFeature.INDENT_OUTPUT); // remove useless whitespaces from message
-            try {
-                QueueService.enqueue(ctx.getInvocationId(), ctx.getLogger(), objectMapper.writeValueAsString(message), 0);
-            } catch (JsonProcessingException e) {
-                ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
-                return false;
-            }
-        }
-        return true;
+    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
+        QueueMessage.QueueMessageBuilder builder = QueueService.getInstance(ctx.getLogger()).generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
+        return switch (operation) {
+            case CREATE, UPDATE -> QueueService.getInstance(ctx.getLogger()).enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
+            case DELETE -> QueueService.getInstance(ctx.getLogger()).enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
+        };
     }
 }

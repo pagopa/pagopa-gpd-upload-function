@@ -1,9 +1,9 @@
-package it.gov.pagopa.gpd.upload.functions.utils;
+package it.gov.pagopa.gpd.upload.functions.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import it.gov.pagopa.gpd.upload.model.UploadOperation;
+import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentOption;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
@@ -19,9 +19,9 @@ import java.util.*;
 
 public class InputGenerator {
     public static void main(String[] args) throws IOException {
-        int N = 50; // debt position number target
-        String fiscalCode = "NFHCJ78D4ENCJADSA";
-        String testType = "UPDATE_TEST";
+        int N = 3; // debt position number target
+        String fiscalCode = "77777777777";
+        String testType = "TEST_TYPE";
         List<PaymentPosition> paymentPositionList = new ArrayList<>();
         for(int i = 0; i < N; i++) {
             String ID = fiscalCode + "_" + UUID.randomUUID().toString().substring(0,10);
@@ -33,7 +33,7 @@ public class InputGenerator {
                                        .iban("IT0000000000000000000000000")
                                        .transferMetadata(new ArrayList<>())
                                        .build();
-            List<Transfer> transferList = new ArrayList<Transfer>();
+            List<Transfer> transferList = new ArrayList<>();
             transferList.add(tf);
             ZonedDateTime zonedDateTime = ZonedDateTime.ofInstant(Instant.now().plus(1, ChronoUnit.DAYS), ZoneId.of("UTC"));
             PaymentOption po = PaymentOption.builder()
@@ -45,7 +45,7 @@ public class InputGenerator {
                                         .transfer(transferList)
                                         .paymentOptionMetadata(new ArrayList<>())
                                         .build();
-            List<PaymentOption> paymentOptionList = new ArrayList<PaymentOption>();
+            List<PaymentOption> paymentOptionList = new ArrayList<>();
             paymentOptionList.add(po);
             PaymentPosition pp = PaymentPosition.builder()
                                         .iupd("IUPD_" + ID + "_" + testType)
@@ -66,7 +66,7 @@ public class InputGenerator {
                                                          .build();
 
         UploadInput input = UploadInput.builder()
-                                    .uploadOperation(UploadOperation.CREATE)
+                                    .operation(CRUDOperation.CREATE)
                                     .paymentPositions(paymentPositions.getPaymentPositions())
                                     .build();
 
@@ -76,7 +76,7 @@ public class InputGenerator {
         objectMapper.registerModule(javaTimeModule);
 
         String extender = UUID.randomUUID().toString().substring(0, 4);
-        String positionsJSON = objectMapper.writeValueAsString(paymentPositions);
+        String positionsJSON = objectMapper.writeValueAsString(paymentPositionList);
         String positionsFilename = "payment-positions" + extender + ".json";
         FileWriter fileWriter = new FileWriter(positionsFilename);
         fileWriter.write(positionsJSON);

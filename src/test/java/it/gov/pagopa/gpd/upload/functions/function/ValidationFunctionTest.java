@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
-import it.gov.pagopa.gpd.upload.util.PaymentPositionValidator;
+import it.gov.pagopa.gpd.upload.util.GPDValidator;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.logging.Logger;
 
-import static it.gov.pagopa.gpd.upload.functions.utils.TestUtil.*;
+import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -30,11 +30,11 @@ class ValidationFunctionTest {
 
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 
-    private static MockedStatic<PaymentPositionValidator> positionValidatorMockedStatic;
+    private static MockedStatic<GPDValidator> positionValidatorMockedStatic;
 
     @BeforeAll
     public static void init() {
-        positionValidatorMockedStatic = mockStatic(PaymentPositionValidator.class);
+        positionValidatorMockedStatic = mockStatic(GPDValidator.class);
     }
 
     @Test
@@ -48,8 +48,8 @@ class ValidationFunctionTest {
         BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
         doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
-        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any());
-        positionValidatorMockedStatic.when(() -> PaymentPositionValidator.validate(any(),any(), any(), any(), any())).thenReturn(true);
+        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
+        positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function

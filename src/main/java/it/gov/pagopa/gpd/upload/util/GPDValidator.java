@@ -5,7 +5,6 @@ import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -18,15 +17,15 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class PaymentPositionValidator {
+public class GPDValidator {
 
-    public static boolean validate(ExecutionContext ctx, StatusService statusService, PaymentPositions paymentPositions, String fiscalCode, String uploadKey) {
+    public static boolean validate(ExecutionContext ctx, List<PaymentPosition> paymentPositions, String fiscalCode, String uploadKey) {
         ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory();
         Validator validator = factory.getValidator();
         Set<ConstraintViolation<PaymentPosition>> violations;
         List<ResponseEntry> entries = new ArrayList<>();
 
-        Iterator<PaymentPosition> iterator = paymentPositions.getPaymentPositions().iterator();
+        Iterator<PaymentPosition> iterator = paymentPositions.iterator();
         while (iterator.hasNext()) {
             PaymentPosition paymentPosition = iterator.next();
             violations =  validator.validate(paymentPosition);
@@ -37,13 +36,7 @@ public class PaymentPositionValidator {
             }
         }
 
-        try {
-            statusService.updateStatus(ctx.getInvocationId(), fiscalCode, uploadKey, entries);
-        } catch (AppException e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", ctx.getInvocationId()));
-            return false;
-        }
-        return true;
+        return updateStatus(ctx, fiscalCode, uploadKey, entries);
     }
 
     private static ResponseEntry createResponseEntry(Logger logger, PaymentPosition paymentPosition, Set<ConstraintViolation<PaymentPosition>> violations) {
@@ -61,5 +54,15 @@ public class PaymentPositionValidator {
         }
 
         return responseEntry;
+    }
+
+    private static boolean updateStatus(ExecutionContext ctx, String orgFiscalCode, String key, List<ResponseEntry> entries) {
+        try {
+            StatusService.getInstance(ctx.getLogger()).updateStatus(ctx.getInvocationId(), orgFiscalCode, key, entries);
+        } catch (AppException e) {
+            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", ctx.getInvocationId()));
+            return false;
+        }
+        return true;
     }
 }
