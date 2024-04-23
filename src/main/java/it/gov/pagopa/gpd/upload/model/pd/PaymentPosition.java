@@ -5,10 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty.Access;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.DebtPositionStatus;
 import it.gov.pagopa.gpd.upload.model.pd.enumeration.Type;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -38,6 +35,7 @@ public class PaymentPosition implements Serializable {
     private String iupd;
     @NotNull(message = "type is required")
     private Type type;
+    private boolean payStandIn;
     @NotBlank(message = "fiscal code is required")
     private String fiscalCode;
     @NotBlank(message = "full name is required")
@@ -53,12 +51,14 @@ public class PaymentPosition implements Serializable {
     @Email(message = "Please provide a valid email address")
     private String email;
     private String phone;
-    @NotNull
+    @NotNull(message = "switch to expired value is required")
     private Boolean switchToExpired;
 
     // Payment Position properties
     @NotBlank(message = "company name is required")
+    @Size(max = 140) // compliant to paForNode.xsd
     private String companyName; // es. Comune di Roma
+    @Size(max = 140) // compliant to paForNode.xsd
     private String officeName; // es. Ufficio Tributi
     private LocalDateTime validityDate;
     @JsonProperty(access = Access.READ_ONLY)
