@@ -33,8 +33,8 @@ public class UploadInput {
     public boolean validOneOf() {
         // check if both list are not null, in this case one of requirement is not met
         boolean xorNotNull = paymentPositions != null ^ paymentPositionIUPDs != null;
-        boolean wrongDeleteMapping = CRUDOperation.DELETE.equals(operation) && paymentPositionIUPDs == null;
-        boolean wrongCreateUpdateMapping = !CRUDOperation.DELETE.equals(operation) && paymentPositions == null;
+        boolean wrongDeleteMapping = CRUDOperation.DELETE.toString().equalsIgnoreCase(operation.toString()) && paymentPositionIUPDs == null;
+        boolean wrongCreateUpdateMapping = !CRUDOperation.DELETE.toString().equalsIgnoreCase(operation.toString()) && paymentPositions == null;
 
         return xorNotNull && !wrongDeleteMapping && !wrongCreateUpdateMapping;
     }

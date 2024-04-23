@@ -24,7 +24,7 @@ public class GPDClient {
     private static final String HEADER_REQUEST_ID = "X-Request-Id";
     private static final String HEADER_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
     private static final String GPD_DEBT_POSITIONS_PATH_V1 = "/v1/organizations/%s/debtpositions";
-    private static final String GPD_DEBT_POSITIONS_PATH_V2 = "/organizations/%s/debtpositions/bulk";
+    private static final String GPD_DEBT_POSITIONS_PATH_V2 = "/v2/organizations/%s/debtpositions";
     private static final String URI_SEPARATOR = "/";
     private static final String GPD_HOST = System.getenv("GPD_HOST");
     private static final String GPD_SUBSCRIPTION_KEY = System.getenv("GPD_SUBSCRIPTION_KEY");

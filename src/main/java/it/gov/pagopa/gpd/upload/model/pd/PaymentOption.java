@@ -3,11 +3,7 @@ package it.gov.pagopa.gpd.upload.model.pd;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import jakarta.validation.Valid;
@@ -37,7 +33,8 @@ public class PaymentOption implements Serializable {
     private String iuv;
     @NotNull(message = "amount is required")
     private Long amount;
-    @NotBlank(message = "description is required")
+    @NotBlank(message = "payment option description is required")
+    @Size(max = 140) // compliant to paForNode.xsd
     private String description;
     @NotNull(message = "is partial payment is required")
     private Boolean isPartialPayment;
