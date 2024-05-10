@@ -10,18 +10,20 @@
     },
     "queues": {
       "maxPollingInterval": "00:01:00",
-      "visibilityTimeout" : "00:00:00",
+      "visibilityTimeout" : "00:02:00",
       "batchSize": 16,
       "maxDequeueCount": 5,
       "newBatchThreshold": 8
     }
   },
   "logging": {
-    "fileLoggingMode": "always",
+    "fileLoggingMode": "debugOnly",
     "logLevel": {
-      "default": "Error",
+      "default": "None",
       "Host.Results": "Error",
-      "Function": "Information",
+      "Function": "Error",
+      "Microsoft": "Information",
+      "Worker": "Information",
       "Host.Aggregator": "Error",
       "Host": "Error"
     },
