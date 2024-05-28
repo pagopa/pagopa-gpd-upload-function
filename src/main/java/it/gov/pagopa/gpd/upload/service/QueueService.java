@@ -3,7 +3,6 @@ package it.gov.pagopa.gpd.upload.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.Constants;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.queue.CloudQueue;
 import com.microsoft.azure.storage.queue.CloudQueueMessage;
@@ -92,11 +91,7 @@ public class QueueService {
 
             try {
                 String message = om.writeValueAsString(cloudMessage);
-
-                if(message.length() > 64 * Constants.KB)
-                    enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunk_size/2);
-                else
-                    enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
+                enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
             } catch (Exception e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;
