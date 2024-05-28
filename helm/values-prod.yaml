@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-upload-function
-    tag: "0.0.14-1-fix-queue-visibility"
+    tag: "0.0.14-2-fix-queue-visibility"
     pullPolicy: Always
   # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
@@ -89,8 +89,8 @@ microservice-chart:
     GPD_CONTAINER_NAME: "gpd_upload_status"
     BLOB_EVENTS_QUEUE: "gpd-blob-events-queue"
     VALID_POSITIONS_QUEUE: "gpd-valid-debt-position-queue"
-    CHUNK_SIZE: "50"
-    MAX_RETRY: "1"
+    CHUNK_SIZE: "20"
+    MAX_RETRY: "2"
     RETRY_DELAY_IN_SECONDS: "300"
   envFieldRef:
     APP_NAME: "metadata.labels['app.kubernetes.io/instance']"
