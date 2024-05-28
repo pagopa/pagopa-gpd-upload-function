@@ -3,11 +3,14 @@ package it.gov.pagopa.gpd.upload.repository;
 import com.azure.cosmos.*;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
+import com.azure.cosmos.models.CosmosPatchOperations;
 import com.azure.cosmos.models.PartitionKey;
 import com.microsoft.azure.functions.HttpStatus;
+import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 
+import java.time.LocalDateTime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -92,5 +95,32 @@ public class StatusRepository {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while upsert status item, code: %s, message: %s", invocationId, e.getStatusCode(), e.getMessage()));
             throw new AppException("Error while upsert Status item " + id);
         }
+    }
+
+    public void increment(Status status, ResponseEntry entry) {
+        CosmosPatchOperations operations = CosmosPatchOperations
+                                                    .create()
+                                                    .add("/upload/responses", entry)
+                                                    .increment("/upload/current", 1);
+        CosmosItemResponse<Status> response = container.patchItem(
+                status.getId(),
+                new PartitionKey(status.getFiscalCode()),
+                operations,
+                Status.class
+        );
+        boolean success = response.getStatusCode() == 200;
+    }
+
+    public void replaceEndDateTime(Status status, LocalDateTime endDateTime) {
+        CosmosPatchOperations operations = CosmosPatchOperations
+                                                   .create()
+                                                   .replace("/upload/end", endDateTime);
+        CosmosItemResponse<Status> response = container.patchItem(
+                status.getId(),
+                new PartitionKey(status.getFiscalCode()),
+                operations,
+                Status.class
+        );
+        boolean success = response.getStatusCode() == 200;
     }
 }
