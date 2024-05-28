@@ -40,7 +40,6 @@ public class CRUDService {
     }
 
     private ResponseGPD applyRequest(RequestGPD requestGPD) {
-        ctx.getLogger().log(Level.OFF, () -> String.format(LOG_ID + "Call GPD-Client", ctx.getInvocationId(), debtPositionMessage.getUploadKey()));
         return method.apply(requestGPD);
     }
 
@@ -66,7 +65,7 @@ public class CRUDService {
     }
 
     private Map<String, ResponseGPD> processRequestOneByOne(List<String> IUPDList) throws JsonProcessingException {
-        ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Single mode processing", ctx.getInvocationId(), debtPositionMessage.getUploadKey()));
+        ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Process request one-by-one", ctx.getInvocationId(), debtPositionMessage.getUploadKey()));
         Map<String, ResponseGPD> responseByIUPD = new HashMap<>();
 
         for(String IUPD: IUPDList) {
