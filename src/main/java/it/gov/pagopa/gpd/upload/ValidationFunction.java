@@ -123,9 +123,9 @@ public class ValidationFunction {
             return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
         } catch (JsonMappingException e) {
             // todo: in this case is a BAD_REQUEST -> update status
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
+            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function JsonMappingException: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
             return false;
-        } catch (AppException | JsonProcessingException e) {
+        } catch (Exception e) {
             ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
             return false;
         }
