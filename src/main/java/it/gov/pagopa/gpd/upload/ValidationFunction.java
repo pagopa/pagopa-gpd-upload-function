@@ -120,9 +120,7 @@ public class ValidationFunction {
             }
 
             // enqueue chunk and other input to form message
-            enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
-
-            return true;
+            return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
         } catch (JsonMappingException e) {
             // todo: in this case is a BAD_REQUEST -> update status
             ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
@@ -138,16 +136,16 @@ public class ValidationFunction {
     }
 
     public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size) throws AppException {
-        Status status = StatusService.getInstance(ctx.getLogger())
+        return StatusService.getInstance(ctx.getLogger())
                                 .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size);
-        return status;
     }
 
     public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
-        QueueMessage.QueueMessageBuilder builder = QueueService.getInstance(ctx.getLogger()).generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
+        QueueService queueService = QueueService.getInstance(ctx.getLogger());
+        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
         return switch (operation) {
-            case CREATE, UPDATE -> QueueService.getInstance(ctx.getLogger()).enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
-            case DELETE -> QueueService.getInstance(ctx.getLogger()).enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
+            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, QueueService.CHUNK_SIZE);
+            case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
         };
     }
 }

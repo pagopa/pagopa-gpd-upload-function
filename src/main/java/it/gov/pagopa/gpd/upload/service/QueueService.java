@@ -1,9 +1,9 @@
 package it.gov.pagopa.gpd.upload.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.storage.CloudStorageAccount;
+import com.microsoft.azure.storage.Constants;
 import com.microsoft.azure.storage.StorageException;
 import com.microsoft.azure.storage.queue.CloudQueue;
 import com.microsoft.azure.storage.queue.CloudQueueMessage;
@@ -22,7 +22,7 @@ public class QueueService {
     private static final String GPD_SA_CONNECTION_STRING = System.getenv("GPD_SA_CONNECTION_STRING");
     private static final String VALID_POSITIONS_QUEUE =
             System.getenv("VALID_POSITIONS_QUEUE") != null ? System.getenv("VALID_POSITIONS_QUEUE") : "VALID_POSITIONS_QUEUE";
-    private static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
+    public static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
     private CloudQueue cloudQueue;
     private Logger logger;
 
@@ -76,7 +76,7 @@ public class QueueService {
 
             try {
                 enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
-            } catch (JsonProcessingException e) {
+            } catch (Exception e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;
             }
@@ -84,13 +84,20 @@ public class QueueService {
         return true;
     }
 
-    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay) {
-        for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
+    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay, int chunk_size) {
+        chunk_size = chunk_size > 0 ? chunk_size : CHUNK_SIZE;
+        for (int i = 0; i < paymentPositions.size(); i += chunk_size) {
             List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + CHUNK_SIZE, paymentPositions.size()));
-            QueueMessage message = builder.paymentPositions(positionSubList).build();
+            QueueMessage cloudMessage = builder.paymentPositions(positionSubList).build();
+
             try {
-                enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
-            } catch (JsonProcessingException e) {
+                String message = om.writeValueAsString(cloudMessage);
+
+                if(message.length() > 64 * Constants.KB)
+                    enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunk_size/2);
+                else
+                    enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
+            } catch (Exception e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;
             }

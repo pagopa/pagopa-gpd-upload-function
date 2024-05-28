@@ -21,7 +21,8 @@
     "logLevel": {
       "default": "None",
       "Host.Results": "Error",
-      "Function": "Error",
+      "Function.BlobQueueEventFunction": "Information",
+      "Function.PaymentPositionDequeueFunction": "Information",
       "Microsoft": "Information",
       "Worker": "Information",
       "Host.Aggregator": "Error",

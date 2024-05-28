@@ -89,8 +89,8 @@ microservice-chart:
     GPD_CONTAINER_NAME: "gpd_upload_status"
     BLOB_EVENTS_QUEUE: "gpd-blob-events-queue"
     VALID_POSITIONS_QUEUE: "gpd-valid-debt-position-queue"
-    CHUNK_SIZE: "50"
-    MAX_RETRY: "1"
+    CHUNK_SIZE: "20"
+    MAX_RETRY: "2"
     RETRY_DELAY_IN_SECONDS: "300"
   envFieldRef:
     APP_NAME: "metadata.labels['app.kubernetes.io/instance']"
