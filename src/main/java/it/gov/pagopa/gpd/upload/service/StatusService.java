@@ -94,7 +94,7 @@ public class StatusService {
         for (String iUPD : responses.keySet()) {
             ResponseGPD response = responses.get(iUPD);
             List<String> iUPDs = List.of(iUPD);
-            String detail = Optional.ofNullable(response.getDetail()).orElse("");;
+            String detail = Optional.ofNullable(response.getDetail()).orElse("");
             ResponseEntry responseEntry = ResponseEntry.builder()
                                                   .statusCode(response.getStatus())
                                                   .statusMessage(detail.substring(0, Math.min(detail.length(), MAX_DETAILS_LENGTH)))

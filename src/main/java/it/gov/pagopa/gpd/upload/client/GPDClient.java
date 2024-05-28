@@ -8,6 +8,7 @@ import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
+import it.gov.pagopa.gpd.upload.util.MapUtils;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -61,7 +62,7 @@ public class GPDClient {
     private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
         try {
             Response response = callGPD(method.name(), path, req.getBody());
-            return mapResponse(response);
+            return mapResponse(method, response);
         } catch (JsonProcessingException e) {
             return ResponseGPD.builder()
                            .retryStep(RetryStep.RETRY)
@@ -80,38 +81,38 @@ public class GPDClient {
                                                  .header(HEADER_SUBSCRIPTION_KEY, GPD_SUBSCRIPTION_KEY)
                                                  .header(HEADER_REQUEST_ID, requestId);
 
-            Response response = builder.method(httpMethod, Entity.json(body));
-            logger.log(Level.INFO, () -> String.format("[requestId=%s][%sDebtPositions] Response: %s", requestId, httpMethod, response.getStatus()));
-            return response;
+            return builder.method(httpMethod, Entity.json(body));
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format("[requestId=%s][%sDebtPositions] Exception: %s", requestId, httpMethod, e.getMessage()));
             return Response.serverError().build();
         }
     }
 
-    private ResponseGPD mapResponse(Response response) throws JsonProcessingException {
+    private ResponseGPD mapResponse(HttpMethod httpMethod, Response response) throws JsonProcessingException {
         ResponseGPD responseGPD;
         int status = response.getStatus();
+        String responseDetail = String.valueOf(status);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+
         if (status >= 200 && status < 300) {
             responseGPD = ResponseGPD.builder()
                                   .retryStep(RetryStep.DONE)
                                   .status(status)
-                                  .detail(String.valueOf(status))
                                   .build();
-        }
-        else if (status >= 400 && status < 500) {
+        } else if (status >= 400 && status < 500) {
             // skip retry if the status is 4xx
             responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
             responseGPD.setRetryStep(RetryStep.ERROR);
-        }
-        else {
+            responseDetail = responseGPD.getDetail();
+        } else {
             responseGPD = ResponseGPD.builder()
                                   .status(status)
                                   .retryStep(RetryStep.RETRY)
                                   .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
         }
+
+        responseGPD.setDetail(MapUtils.getDetail(httpMethod, HttpStatus.valueOf(status), responseDetail));
         return responseGPD;
     }
 }
