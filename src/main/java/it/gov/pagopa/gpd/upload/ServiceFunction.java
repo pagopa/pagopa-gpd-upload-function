@@ -17,6 +17,7 @@ import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
+import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 import it.gov.pagopa.gpd.upload.service.CRUDService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.MapUtils;
@@ -48,8 +49,8 @@ public class ServiceFunction {
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, msg.getOrganizationFiscalCode(), msg.getUploadKey());
             if(status.upload.getCurrent() == status.upload.getTotal()) {
-                getStatusService(ctx).updateStatusEndTime(invocationId, status.fiscalCode, status.id, LocalDateTime.now());
-                report(ctx, logger, msg.getUploadKey(), msg.getBrokerCode(), msg.getOrganizationFiscalCode());
+                StatusRepository.getInstance(logger).partialUpdate(status.id, status.fiscalCode, LocalDateTime.now());
+                report(logger, status, msg.getBrokerCode());
             }
 
             Runtime.getRuntime().gc();
@@ -58,12 +59,12 @@ public class ServiceFunction {
         }
     }
 
-    private void report(ExecutionContext ctx, Logger logger, String uploadKey, String broker, String fiscalCode) throws AppException, JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-        objectMapper.registerModule(new JavaTimeModule());
-        Status status = getStatusService(ctx).getStatus(ctx.getInvocationId(), fiscalCode, uploadKey);
-        BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), broker, fiscalCode, uploadKey + ".json");
+    private void report(Logger logger, Status status, String broker) throws JsonProcessingException {
+        ObjectMapper om = new ObjectMapper();
+        om.enable(SerializationFeature.INDENT_OUTPUT);
+        om.registerModule(new JavaTimeModule());
+        String report = om.writeValueAsString(MapUtils.convert(status));
+        BlobRepository.getInstance(logger).uploadReport(report, broker, status.getFiscalCode(), status.getId() + ".json");
     }
 
     private Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {

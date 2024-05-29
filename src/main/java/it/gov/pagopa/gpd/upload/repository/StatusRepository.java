@@ -97,30 +97,30 @@ public class StatusRepository {
         }
     }
 
-    public void increment(Status status, ResponseEntry entry) {
+    public boolean increment(String id, String fiscalCode, ResponseEntry entry) {
         CosmosPatchOperations operations = CosmosPatchOperations
                                                     .create()
                                                     .add("/upload/responses", entry)
-                                                    .increment("/upload/current", 1);
+                                                    .increment("/upload/current", entry.requestIDs.size());
         CosmosItemResponse<Status> response = container.patchItem(
-                status.getId(),
-                new PartitionKey(status.getFiscalCode()),
+                id,
+                new PartitionKey(fiscalCode),
                 operations,
                 Status.class
         );
-        boolean success = response.getStatusCode() == 200;
+        return 200 == response.getStatusCode();
     }
 
-    public void replaceEndDateTime(Status status, LocalDateTime endDateTime) {
+    public boolean partialUpdate(String id, String fiscalCode, LocalDateTime endDateTime) {
         CosmosPatchOperations operations = CosmosPatchOperations
                                                    .create()
                                                    .replace("/upload/end", endDateTime);
         CosmosItemResponse<Status> response = container.patchItem(
-                status.getId(),
-                new PartitionKey(status.getFiscalCode()),
+                id,
+                new PartitionKey(fiscalCode),
                 operations,
                 Status.class
         );
-        boolean success = response.getStatusCode() == 200;
+        return 200 == response.getStatusCode();
     }
 }

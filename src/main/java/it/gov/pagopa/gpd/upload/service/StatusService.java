@@ -18,7 +18,7 @@ import java.util.logging.Logger;
 public class StatusService {
     private static volatile StatusService instance;
     private Logger logger;
-    private final int MAX_DETAILS_LENGTH = 112;
+    public final int MAX_DETAILS_LENGTH = 112;
 
     public static StatusService getInstance(Logger logger) {
         if (instance == null) {

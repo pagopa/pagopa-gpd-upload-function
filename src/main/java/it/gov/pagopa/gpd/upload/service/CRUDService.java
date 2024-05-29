@@ -5,14 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.entity.DebtPositionMessage;
+import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.*;
+import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -23,6 +22,7 @@ public class CRUDService {
     private static final Integer RETRY_DELAY =
             System.getenv("RETRY_DELAY_IN_SECONDS") != null ? Integer.parseInt(System.getenv("RETRY_DELAY_IN_SECONDS")) : 300;
     private static final String LOG_ID = "[id=%s][upload-key=%s][OperationService] ";
+    private final int MAX_DETAILS_LENGTH = 112;
 
     private final ObjectMapper om;
     private final DebtPositionMessage debtPositionMessage;
@@ -57,10 +57,12 @@ public class CRUDService {
 
             ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Call Status update for %s IUPDs",
                     ctx.getInvocationId(), debtPositionMessage.getUploadKey(), responseByIUPD.keySet().size()));
-            statusService.appendResponses(ctx.getInvocationId(), debtPositionMessage.getOrganizationFiscalCode(), debtPositionMessage.getUploadKey(), responseByIUPD);
+            List<ResponseEntry> entries = get(responseByIUPD);
+            entries.forEach(entry -> StatusRepository.getInstance(ctx.getLogger()).increment(debtPositionMessage.getUploadKey(), debtPositionMessage.getOrganizationFiscalCode(), entry));
         } else {
             // if BULK creation was successful
-            statusService.appendResponse(ctx.getInvocationId(), debtPositionMessage.getOrganizationFiscalCode(), debtPositionMessage.getUploadKey(), IUPDList, response);
+            ResponseEntry entry = get(response, IUPDList);
+            StatusRepository.getInstance(ctx.getLogger()).increment(debtPositionMessage.getUploadKey(), debtPositionMessage.getOrganizationFiscalCode(), entry);
         }
     }
 
@@ -95,5 +97,31 @@ public class CRUDService {
         ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Retry message %s",
                 ctx.getInvocationId(), debtPositionMessage.getUploadKey(), queueMessage.getUploadKey()));
         return QueueService.getInstance(ctx.getLogger()).enqueue(ctx.getInvocationId(), om.writeValueAsString(queueMessage), RETRY_DELAY);
+    }
+
+
+    private ResponseEntry get(ResponseGPD response, List<String> IUPDList) {
+        String detail = Optional.ofNullable(response.getDetail()).orElse("");
+        return ResponseEntry.builder()
+                .statusCode(response.getStatus())
+                .statusMessage(detail.substring(0, Math.min(detail.length(), MAX_DETAILS_LENGTH)))
+                .requestIDs(IUPDList)
+                .build();
+    }
+
+    private List<ResponseEntry> get(Map<String, ResponseGPD> responses) {
+        List<ResponseEntry> entries = new ArrayList<>();
+        for (String iUPD : responses.keySet()) {
+            ResponseGPD response = responses.get(iUPD);
+            List<String> IUPDList = List.of(iUPD);
+            String detail = Optional.ofNullable(response.getDetail()).orElse("");
+            ResponseEntry responseEntry = ResponseEntry.builder()
+                    .statusCode(response.getStatus())
+                    .statusMessage(detail.substring(0, Math.min(detail.length(), MAX_DETAILS_LENGTH)))
+                    .requestIDs(IUPDList)
+                    .build();
+            entries.add(responseEntry);
+        }
+        return entries;
     }
 }
