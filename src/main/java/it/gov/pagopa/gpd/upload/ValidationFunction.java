@@ -35,24 +35,23 @@ import java.util.regex.Pattern;
  * Validation step act as a filter and is followed by the queuing step
  */
 public class ValidationFunction {
+    private static final String LOG_PREFIX = "[id=%s][upload=%s][ValidationFunction]:";
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
             @QueueTrigger(name = "BlobCreatedEventTrigger", queueName = "%BLOB_EVENTS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String events,
             final ExecutionContext context) {
-
+        List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
         Logger logger = context.getLogger();
 
-        List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
-
         if (eventGridEvents.isEmpty()) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Empty event list.", context.getInvocationId()));
+            logger.log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Empty event list", context.getInvocationId(), "-"));
             return; // skip event
         }
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
-                logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] Call event type %s handler.", context.getInvocationId(), event.getEventType()));
+                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Call event type %s handler.", context.getInvocationId(), "-", event.getEventType()));
 
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
@@ -65,7 +64,7 @@ public class ValidationFunction {
                     return; // skip event
                 }
 
-                logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] Blob event subject: %s", context.getInvocationId(), event.getSubject()));
+                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Blob event subject: %s", context.getInvocationId(), "-", event.getSubject()));
 
 
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-\\h]+\\.[Jj][Ss][Oo][Nn])");
@@ -77,15 +76,16 @@ public class ValidationFunction {
                     String fiscalCode = matcher.group(2);   // creditor institution directory
                     String filename = matcher.group(3);     // e.g. 77777777777c8a1.json
 
-                    logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] broker: %s, fiscalCode: %s, filename: %s", context.getInvocationId(), broker, fiscalCode, filename));
-
                     BinaryData content = this.downloadBlob(context, broker, fiscalCode, filename);
                     String key = filename.substring(0, filename.indexOf("."));
-                    this.validateBlob(context, broker, fiscalCode, key, content);
 
+                    logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "broker: %s, fiscalCode: %s, filename: %s",
+                            context.getInvocationId(), key, broker, fiscalCode, filename));
+
+                    this.validateBlob(context, broker, fiscalCode, key, content);
                     Runtime.getRuntime().gc();
                 } else {
-                    logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", context.getInvocationId()));
+                    logger.log(Level.SEVERE, () -> String.format(LOG_PREFIX + "No match found in the input string", context.getInvocationId(), "-"));
                 }
             }
         }
@@ -123,11 +123,13 @@ public class ValidationFunction {
             // enqueue chunk and other input to form message
             return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
         } catch (JsonMappingException e) {
-            // todo: in this case is a BAD_REQUEST -> update status
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function JsonMappingException: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
+            StatusRepository.getInstance(ctx.getLogger()).partialUpdate(uploadKey, fiscalCode, LocalDateTime.now());
+            ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Processing function JsonMappingException: %s, caused by: %s",
+                    ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause()));
             return false;
         } catch (Exception e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
+            ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Processing function exception: %s, caused by: %s",
+                    ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause()));
             return false;
         }
     }
@@ -149,7 +151,8 @@ public class ValidationFunction {
         Status status = StatusRepository.getInstance(ctx.getLogger()).createIfNotExist(ctx.getInvocationId(), uploadKey, orgFiscalCode, statusIfNotExist);
 
         if (status.upload.getEnd() != null)
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][StatusService]Upload already processed. Upload finished at: %s", ctx.getInvocationId(), status.upload.getEnd()));
+            ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Upload already processed. Upload finished at: %s",
+                    ctx.getInvocationId(), uploadKey, status.upload.getEnd()));
 
         return status;
     }

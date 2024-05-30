@@ -18,13 +18,12 @@ import java.util.logging.Logger;
 
 public class StatusRepository {
     private static volatile StatusRepository instance;
-    private String cosmosURI = System.getenv("COSMOS_URI");
-    private String cosmosKey = System.getenv("COSMOS_KEY");
-    private String databaseName = System.getenv("GPD_DB_NAME");
-    private String containerName = System.getenv("GPD_CONTAINER_NAME");
-    private CosmosClient cosmosClient;
+    private final String cosmosURI = System.getenv("COSMOS_URI");
+    private final String cosmosKey = System.getenv("COSMOS_KEY");
+    private final String databaseName = System.getenv("GPD_DB_NAME");
+    private final String containerName = System.getenv("GPD_CONTAINER_NAME");
     private CosmosContainer container;
-    private Logger logger;
+    private final Logger logger;
 
     public static StatusRepository getInstance(Logger logger) {
         if (instance == null) {
@@ -43,11 +42,11 @@ public class StatusRepository {
     }
 
     private void initCosmosClient() {
-        cosmosClient = new CosmosClientBuilder()
-                               .endpoint(cosmosURI)
-                               .key(cosmosKey)
-                               .consistencyLevel(ConsistencyLevel.EVENTUAL)
-                               .buildClient();
+        CosmosClient cosmosClient = new CosmosClientBuilder()
+                .endpoint(cosmosURI)
+                .key(cosmosKey)
+                .consistencyLevel(ConsistencyLevel.EVENTUAL)
+                .buildClient();
         container = cosmosClient.getDatabase(databaseName).getContainer(containerName);
     }
 

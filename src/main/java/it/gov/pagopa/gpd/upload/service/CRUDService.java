@@ -19,9 +19,9 @@ public class CRUDService {
     private static final Integer MAX_RETRY =
             System.getenv("MAX_RETRY") != null ? Integer.parseInt(System.getenv("MAX_RETRY")) : 2;
     private static final Integer RETRY_DELAY =
-            System.getenv("RETRY_DELAY_IN_SECONDS") != null ? Integer.parseInt(System.getenv("RETRY_DELAY_IN_SECONDS")) : 300;
-    private static final String LOG_ID = "[id=%s][upload-key=%s][OperationService] ";
-    private final int MAX_DETAILS_LENGTH = 112;
+            System.getenv("RETRY_DELAY_IN_SECONDS") != null ? Integer.parseInt(System.getenv("RETRY_DELAY_IN_SECONDS")) : 30;
+    private static final String LOG_ID = "[id=%s][upload=%s][CrudService] ";
+    private static final int MAX_DETAILS_LENGTH = 112;
 
     private final ObjectMapper om;
     private final DebtPositionMessage debtPositionMessage;
@@ -42,24 +42,27 @@ public class CRUDService {
 
     // constraint: paymentPositions size less than max bulk item per call -> compliant by design(max queue message = 64KB = ~30 PaymentPosition)
     public void processRequestInBulk() throws JsonProcessingException {
-        ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Process request in BULK", ctx.getInvocationId(), debtPositionMessage.getUploadKey()));
-
+        String uploadKey = debtPositionMessage.getUploadKey();
+        String orgFiscalCode = debtPositionMessage.getOrganizationFiscalCode();
         RequestGPD requestGPD = debtPositionMessage.getRequest(RequestTranslator.getInstance(), RequestGPD.Mode.BULK, Optional.empty());
         List<String> IUPDList = debtPositionMessage.getIUPDList();
+
+        ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Process request in BULK", ctx.getInvocationId(), uploadKey));
         ResponseGPD response = applyRequest(requestGPD);
 
         if(!response.is2xxSuccessful()) {
             // if BULK creation wasn't successful, switch to single debt position creation
             Map<String, ResponseGPD> responseByIUPD = processRequestOneByOne(IUPDList);
-
-            ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Call Status update for %s IUPDs",
-                    ctx.getInvocationId(), debtPositionMessage.getUploadKey(), responseByIUPD.keySet().size()));
             List<ResponseEntry> entries = get(responseByIUPD);
-            entries.forEach(entry -> StatusRepository.getInstance(ctx.getLogger()).increment(debtPositionMessage.getUploadKey(), debtPositionMessage.getOrganizationFiscalCode(), entry));
+            entries.forEach(entry -> {
+                ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Call Status increment for %s IUPDs",
+                        ctx.getInvocationId(), uploadKey, entry.getRequestIDs().size()));
+                StatusRepository.getInstance(ctx.getLogger()).increment(uploadKey, orgFiscalCode, entry);
+            });
         } else {
             // if BULK creation was successful
             ResponseEntry entry = get(response, IUPDList);
-            StatusRepository.getInstance(ctx.getLogger()).increment(debtPositionMessage.getUploadKey(), debtPositionMessage.getOrganizationFiscalCode(), entry);
+            StatusRepository.getInstance(ctx.getLogger()).increment(uploadKey, orgFiscalCode, entry);
         }
     }
 
