@@ -36,6 +36,7 @@ jobs:
   integration_test:
     name: Test ${{(github.event.inputs == null && 'dev') || inputs.environment }}
     runs-on: ubuntu-latest
+    if: false # see https://github.com/pagopa/pagopa-gpd-upload/actions/workflows/integration_test.yml
     environment: ${{(github.event.inputs == null && 'dev') || inputs.environment }}
     steps:
       - name: Checkout
