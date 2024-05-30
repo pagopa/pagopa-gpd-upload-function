@@ -11,12 +11,9 @@ import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
 import it.gov.pagopa.gpd.upload.service.CRUDService;
-import it.gov.pagopa.gpd.upload.service.StatusService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
@@ -30,11 +27,11 @@ public class CRUDServiceTest {
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 
     @Test
-    void test1() throws AppException, JsonProcessingException {
+    void test1() throws JsonProcessingException {
         when(context.getLogger()).thenReturn(Logger.getLogger("gpd-upload-test-logger"));
         Function<RequestGPD, ResponseGPD> method = getMethod(ResultType.SUCCESS);
         DebtPositionMessage debtPositionMessage = new UpsertMessage(TestUtil.getCreateQueueMessage());
-        CRUDService operationService = new CRUDService(context, method, debtPositionMessage, new EStatusService());
+        CRUDService operationService = new CRUDService(context, method, debtPositionMessage);
         operationService.processRequestInBulk();
     }
 
@@ -43,7 +40,7 @@ public class CRUDServiceTest {
         when(context.getLogger()).thenReturn(Logger.getLogger("gpd-upload-test-logger"));
         Function<RequestGPD, ResponseGPD> method = getMethod(ResultType.NOT_FOUND);
         DebtPositionMessage debtPositionMessage = new UpsertMessage(TestUtil.getCreateQueueMessage());
-        CRUDService operationService = new CRUDService(context, method, debtPositionMessage, new EStatusService());
+        CRUDService operationService = new CRUDService(context, method, debtPositionMessage);
         operationService.processRequestInBulk();
     }
 
@@ -52,7 +49,7 @@ public class CRUDServiceTest {
         when(context.getLogger()).thenReturn(Logger.getLogger("gpd-upload-test-logger"));
         Function<RequestGPD, ResponseGPD> method = getMethod(ResultType.FAIL);
         DebtPositionMessage debtPositionMessage = new UpsertMessage(TestUtil.getCreateQueueMessage());
-        CRUDService operationService = new CRUDService(context, method, debtPositionMessage, new EStatusService());
+        CRUDService operationService = new CRUDService(context, method, debtPositionMessage);
         // the test is performed without instantiation of a real storage and valid CONNECTION_STRING is not present at JUnit test time
         assertThrows(IllegalArgumentException.class, operationService::processRequestInBulk);
     }
@@ -87,14 +84,5 @@ public class CRUDServiceTest {
                        .retryStep(RetryStep.RETRY)
                        .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                        .build();
-    }
-
-    public static class EStatusService extends StatusService {
-        @Override
-        public void appendResponses(String invocationId, String fiscalCode, String key, Map<String, ResponseGPD> responses) {
-        }
-
-        public void appendResponse(String invocationId, String fiscalCode, String key, List<String> iUPDs, ResponseGPD response) {
-        }
     }
 }

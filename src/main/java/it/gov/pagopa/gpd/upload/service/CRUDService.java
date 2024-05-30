@@ -7,7 +7,6 @@ import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.entity.DebtPositionMessage;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
-import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.*;
 import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 
@@ -27,14 +26,12 @@ public class CRUDService {
     private final ObjectMapper om;
     private final DebtPositionMessage debtPositionMessage;
     private final Function<RequestGPD, ResponseGPD> method;
-    private final StatusService statusService;
     private final ExecutionContext ctx;
 
-    public CRUDService(ExecutionContext context, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage message, StatusService statusService) {
+    public CRUDService(ExecutionContext context, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage message) {
         this.debtPositionMessage = message;
         this.method = method;
         this.ctx = context;
-        this.statusService = statusService;
         om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
     }
@@ -44,7 +41,7 @@ public class CRUDService {
     }
 
     // constraint: paymentPositions size less than max bulk item per call -> compliant by design(max queue message = 64KB = ~30 PaymentPosition)
-    public void processRequestInBulk() throws AppException, JsonProcessingException {
+    public void processRequestInBulk() throws JsonProcessingException {
         ctx.getLogger().log(Level.INFO, () -> String.format(LOG_ID + "Process request in BULK", ctx.getInvocationId(), debtPositionMessage.getUploadKey()));
 
         RequestGPD requestGPD = debtPositionMessage.getRequest(RequestTranslator.getInstance(), RequestGPD.Mode.BULK, Optional.empty());
@@ -98,7 +95,6 @@ public class CRUDService {
                 ctx.getInvocationId(), debtPositionMessage.getUploadKey(), queueMessage.getUploadKey()));
         return QueueService.getInstance(ctx.getLogger()).enqueue(ctx.getInvocationId(), om.writeValueAsString(queueMessage), RETRY_DELAY);
     }
-
 
     private ResponseEntry get(ResponseGPD response, List<String> IUPDList) {
         String detail = Optional.ofNullable(response.getDetail()).orElse("");

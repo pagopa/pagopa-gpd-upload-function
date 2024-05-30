@@ -62,7 +62,7 @@ public class GPDClient {
     private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
         try {
             Response response = callGPD(method.name(), path, req.getBody());
-            return mapResponse(method, response);
+            return mapResponse(response);
         } catch (JsonProcessingException e) {
             return ResponseGPD.builder()
                            .retryStep(RetryStep.RETRY)
@@ -88,10 +88,9 @@ public class GPDClient {
         }
     }
 
-    private ResponseGPD mapResponse(HttpMethod httpMethod, Response response) throws JsonProcessingException {
+    private ResponseGPD mapResponse(Response response) throws JsonProcessingException {
         ResponseGPD responseGPD;
         int status = response.getStatus();
-        String responseDetail = String.valueOf(status);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
 
@@ -104,7 +103,6 @@ public class GPDClient {
             // skip retry if the status is 4xx
             responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
             responseGPD.setRetryStep(RetryStep.ERROR);
-            responseDetail = responseGPD.getDetail();
         } else {
             responseGPD = ResponseGPD.builder()
                                   .status(status)
@@ -112,7 +110,7 @@ public class GPDClient {
                                   .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
         }
 
-        responseGPD.setDetail(MapUtils.getDetail(httpMethod, HttpStatus.valueOf(status), responseDetail));
+        responseGPD.setDetail(MapUtils.getDetail(HttpStatus.valueOf(status)));
         return responseGPD;
     }
 }

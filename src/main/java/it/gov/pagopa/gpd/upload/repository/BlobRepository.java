@@ -6,6 +6,12 @@ import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobStorageException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import it.gov.pagopa.gpd.upload.entity.Status;
+import it.gov.pagopa.gpd.upload.util.MapUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.logging.Level;
@@ -54,6 +60,18 @@ public class BlobRepository {
             logger.log(Level.INFO, () -> "blob doesn't exist: " + blobName);
 
         return blobClient.downloadContent();
+    }
+
+    public void report(Status status) {
+        ObjectMapper om = new ObjectMapper();
+        om.enable(SerializationFeature.INDENT_OUTPUT);
+        om.registerModule(new JavaTimeModule());
+        try {
+            String report = om.writeValueAsString(MapUtils.convert(status));
+            BlobRepository.getInstance(logger).uploadReport(report, status.brokerID, status.fiscalCode, status.id + ".json");
+        } catch (JsonProcessingException e) {
+            logger.log(Level.SEVERE, () -> "JsonProcessingException " + e.getMessage());
+        }
     }
 
     public void uploadReport(String data, String broker, String fiscalCode, String filename) {

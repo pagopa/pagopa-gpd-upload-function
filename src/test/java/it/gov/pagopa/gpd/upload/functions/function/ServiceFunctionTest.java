@@ -7,7 +7,6 @@ import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ServiceFunction;
 import it.gov.pagopa.gpd.upload.client.GPDClient;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
-import it.gov.pagopa.gpd.upload.service.StatusService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -29,9 +28,6 @@ class ServiceFunctionTest {
 
     @Mock
     GPDClient gpdClient;
-
-    @Mock
-    StatusService statusService;
 
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 

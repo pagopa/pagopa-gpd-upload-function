@@ -19,7 +19,7 @@ import java.util.*;
 
 public class InputGenerator {
     public static void main(String[] args) throws IOException {
-        int N = 3; // debt position number target
+        int N = 30; // debt position number target
         String fiscalCode = "77777777777";
         String testType = "TEST_TYPE";
         List<PaymentPosition> paymentPositionList = new ArrayList<>();

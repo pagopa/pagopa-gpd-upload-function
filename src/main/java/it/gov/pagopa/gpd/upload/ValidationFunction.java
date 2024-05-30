@@ -4,7 +4,6 @@ import com.azure.core.implementation.serializer.DefaultJsonSerializer;
 import com.azure.core.util.BinaryData;
 import com.azure.messaging.eventgrid.EventGridEvent;
 import com.azure.messaging.eventgrid.systemevents.StorageBlobCreatedEventData;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -13,16 +12,18 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.entity.Status;
+import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
+import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
-import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -135,16 +136,29 @@ public class ValidationFunction {
         return BlobRepository.getInstance(ctx.getLogger()).download(broker, fiscalCode, filename);
     }
 
-    public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size) throws AppException {
-        return StatusService.getInstance(ctx.getLogger())
-                                .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size);
+    public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int totalPosition) throws AppException {
+        Status statusIfNotExist = Status.builder()
+                .id(uploadKey)
+                .brokerID(broker)
+                .fiscalCode(orgFiscalCode)
+                .upload(Upload.builder()
+                        .current(0)
+                        .total(totalPosition)
+                        .start(LocalDateTime.now()).build())
+                .build();
+        Status status = StatusRepository.getInstance(ctx.getLogger()).createIfNotExist(ctx.getInvocationId(), uploadKey, orgFiscalCode, statusIfNotExist);
+
+        if (status.upload.getEnd() != null)
+            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][StatusService]Upload already processed. Upload finished at: %s", ctx.getInvocationId(), status.upload.getEnd()));
+
+        return status;
     }
 
     public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
         QueueService queueService = QueueService.getInstance(ctx.getLogger());
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
         return switch (operation) {
-            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, QueueService.CHUNK_SIZE);
+            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
             case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
         };
     }

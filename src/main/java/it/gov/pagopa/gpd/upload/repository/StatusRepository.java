@@ -9,8 +9,10 @@ import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
+import it.gov.pagopa.gpd.upload.util.MapUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -82,8 +84,8 @@ public class StatusRepository {
         }
     }
 
-    public synchronized void upsertStatus(String invocationId, String id, Status status) throws AppException {
-        logger.info("Upsert Status id " + id);
+    private synchronized void upsertStatus(String invocationId, String id, Status status) throws AppException {
+        logger.log(Level.INFO, () ->"Upsert Status id " + id);
 
         try {
             CosmosItemResponse<Status> response = container.upsertItem(status, new CosmosItemRequestOptions());
@@ -97,21 +99,27 @@ public class StatusRepository {
         }
     }
 
-    public boolean increment(String id, String fiscalCode, ResponseEntry entry) {
-        CosmosPatchOperations operations = CosmosPatchOperations
-                                                    .create()
-                                                    .add("/upload/responses", entry)
-                                                    .increment("/upload/current", entry.requestIDs.size());
-        CosmosItemResponse<Status> response = container.patchItem(
-                id,
-                new PartitionKey(fiscalCode),
-                operations,
-                Status.class
-        );
-        return 200 == response.getStatusCode();
+    public void increment(String id, String fiscalCode, ResponseEntry entry) {
+        String key = MapUtils.getKey(HttpStatus.valueOf(entry.getStatusCode()));
+        List<String> requestIDs = entry.getRequestIDs();
+
+        // The number of patch operations cannot exceed '10'
+        for(int i=0; i<requestIDs.size(); i+=10) {
+            List<String> subRequestIDs = requestIDs.subList(i, Math.min(i+10, requestIDs.size()));
+            CosmosPatchOperations operations = CosmosPatchOperations
+                    .create()
+                    .increment("/upload/current", subRequestIDs.size());
+            requestIDs.subList(i, Math.min(i+10, requestIDs.size())).forEach(requestID -> operations.add("/upload/"+key+"/requestIDs/-", requestID));
+            container.patchItem(
+                    id,
+                    new PartitionKey(fiscalCode),
+                    operations,
+                    Status.class
+            );
+        }
     }
 
-    public boolean partialUpdate(String id, String fiscalCode, LocalDateTime endDateTime) {
+    public void partialUpdate(String id, String fiscalCode, LocalDateTime endDateTime) {
         CosmosPatchOperations operations = CosmosPatchOperations
                                                    .create()
                                                    .replace("/upload/end", endDateTime);
@@ -121,6 +129,6 @@ public class StatusRepository {
                 operations,
                 Status.class
         );
-        return 200 == response.getStatusCode();
+        response.getStatusCode();
     }
 }

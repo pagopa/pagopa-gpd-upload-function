@@ -3,9 +3,8 @@ package it.gov.pagopa.gpd.upload.util;
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
-import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
-import it.gov.pagopa.gpd.upload.service.StatusService;
+import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
@@ -36,7 +35,8 @@ public class GPDValidator {
             }
         }
 
-        return updateStatus(ctx, fiscalCode, uploadKey, entries);
+        entries.forEach(entry -> StatusRepository.getInstance(ctx.getLogger()).increment(uploadKey, fiscalCode, entry));
+        return true;
     }
 
     private static ResponseEntry createResponseEntry(Logger logger, PaymentPosition paymentPosition, Set<ConstraintViolation<PaymentPosition>> violations) {
@@ -54,15 +54,5 @@ public class GPDValidator {
         }
 
         return responseEntry;
-    }
-
-    private static boolean updateStatus(ExecutionContext ctx, String orgFiscalCode, String key, List<ResponseEntry> entries) {
-        try {
-            StatusService.getInstance(ctx.getLogger()).updateStatus(ctx.getInvocationId(), orgFiscalCode, key, entries);
-        } catch (AppException e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", ctx.getInvocationId()));
-            return false;
-        }
-        return true;
     }
 }
