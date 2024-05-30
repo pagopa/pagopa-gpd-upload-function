@@ -104,12 +104,12 @@ public class StatusRepository {
         List<String> requestIDs = entry.getRequestIDs();
 
         // The number of patch operations cannot exceed '10'
-        for(int i=0; i<requestIDs.size(); i+=10) {
-            List<String> subRequestIDs = requestIDs.subList(i, Math.min(i+10, requestIDs.size()));
+        for(int i=0; i<requestIDs.size(); i+=9) {
+            List<String> subRequestIDs = requestIDs.subList(i, Math.min(i+9, requestIDs.size()));
             CosmosPatchOperations operations = CosmosPatchOperations
                     .create()
                     .increment("/upload/current", subRequestIDs.size());
-            requestIDs.subList(i, Math.min(i+10, requestIDs.size())).forEach(requestID -> operations.add("/upload/"+key+"/requestIDs/-", requestID));
+            subRequestIDs.forEach(requestID -> operations.add("/upload/"+key+"/requestIDs/-", requestID));
             container.patchItem(
                     id,
                     new PartitionKey(fiscalCode),
