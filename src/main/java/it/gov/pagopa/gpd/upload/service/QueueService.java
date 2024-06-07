@@ -88,10 +88,10 @@ public class QueueService {
         chunk_size = chunk_size > 0 ? chunk_size : CHUNK_SIZE;
         for (int i = 0; i < paymentPositions.size(); i += chunk_size) {
             List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + CHUNK_SIZE, paymentPositions.size()));
-            QueueMessage cloudMessage = builder.paymentPositions(positionSubList).build();
+            QueueMessage queueMessage = builder.paymentPositions(positionSubList).build();
 
             try {
-                String message = om.writeValueAsString(cloudMessage);
+                String message = om.writeValueAsString(queueMessage);
 
                 if(message.length() > 64 * Constants.KB)
                     enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunk_size/2);

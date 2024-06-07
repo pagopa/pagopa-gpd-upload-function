@@ -45,11 +45,14 @@ public class ServiceFunction {
             Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
             getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
 
+            String key = msg.getUploadKey();
+            String orgFiscalCode = msg.getOrganizationFiscalCode();
+
             // check if upload is completed
-            Status status = getStatusService(ctx).getStatus(invocationId, msg.getOrganizationFiscalCode(), msg.getUploadKey());
+            Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
             if(status.upload.getCurrent() == status.upload.getTotal()) {
-                getStatusService(ctx).updateStatusEndTime(invocationId, status.fiscalCode, status.id, LocalDateTime.now());
-                report(ctx, logger, msg.getUploadKey(), msg.getBrokerCode(), msg.getOrganizationFiscalCode());
+                getStatusService(ctx).updateStatusEndTime(invocationId, orgFiscalCode, key, LocalDateTime.now());
+                report(ctx, logger, key, msg.getBrokerCode(), orgFiscalCode);
             }
 
             Runtime.getRuntime().gc();

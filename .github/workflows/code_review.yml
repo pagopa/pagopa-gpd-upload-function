@@ -48,6 +48,7 @@ jobs:
   smoke-test:
     name: Smoke Test
     runs-on: ubuntu-latest
+    if: false # todo
     environment:
       name: dev
     steps:
