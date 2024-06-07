@@ -45,7 +45,7 @@ public class CRUDService {
     }
 
     private ResponseGPD applyRequest(RequestGPD requestGPD) {
-        logger.log(Level.INFO, () -> String.format("[id=%s][OperationService] Call GPD-Client", id));
+        logger.log(Level.INFO, () -> String.format("[id=%s][CrudService] Call GPD-Client", id));
         return method.apply(requestGPD);
     }
 

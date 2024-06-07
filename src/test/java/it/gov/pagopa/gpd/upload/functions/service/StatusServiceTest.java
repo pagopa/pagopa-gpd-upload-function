@@ -63,7 +63,7 @@ public class StatusServiceTest {
         doReturn(getMockStatus()).when(statusRepository).getStatus(any(), any(), any());
         doNothing().when(statusRepository).upsertStatus(any(), any(), any());
         //Assertion
-        assertNotNull(statusService.updateStatusEndTime(ctx.getInvocationId(), "fiscalCode", "key", LocalDateTime.now()));
+        assertNotNull(statusService.updateStatusEndTime("fiscalCode", "key", LocalDateTime.now()));
     }
 
     @Test

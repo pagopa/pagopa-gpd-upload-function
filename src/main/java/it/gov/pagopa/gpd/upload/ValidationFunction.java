@@ -128,7 +128,7 @@ public class ValidationFunction {
             // enqueue chunk and other input to form message
             return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
         } catch (JsonMappingException e) {
-            StatusService.getInstance(ctx.getLogger()).updateStatusEndTime(ctx.getInvocationId(), fiscalCode, uploadKey, LocalDateTime.now());
+            StatusService.getInstance(ctx.getLogger()).updateStatusEndTime(fiscalCode, uploadKey, LocalDateTime.now());
             ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Processing function JsonMappingException: %s, caused by: %s",
                     ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause()));
             return false;

@@ -119,7 +119,7 @@ public class TestUtil {
                        .fiscalCode("fiscalCode")
                        .brokerID("brokerId")
                        .upload(Upload.builder()
-                                       .responses(getMockResponseEntries())
+                                       .responses(null)
                                        .build())
                        .build();
     }

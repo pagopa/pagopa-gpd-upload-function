@@ -91,12 +91,7 @@ public class QueueService {
             QueueMessage queueMessage = builder.paymentPositions(positionSubList).build();
 
             try {
-                String message = om.writeValueAsString(queueMessage);
-
-                if(message.length() > 64 * Constants.KB)
-                    enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunk_size/2);
-                else
-                    enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
+                enqueue(ctx.getInvocationId(), om.writeValueAsString(queueMessage), delay);
             } catch (Exception e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;

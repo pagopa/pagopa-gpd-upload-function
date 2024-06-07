@@ -51,13 +51,14 @@ public class ServiceFunction {
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
             if(status.upload.getCurrent() == status.upload.getTotal()) {
-                getStatusService(ctx).updateStatusEndTime(invocationId, orgFiscalCode, key, LocalDateTime.now());
+                getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, LocalDateTime.now());
                 report(ctx, logger, key, msg.getBrokerCode(), orgFiscalCode);
             }
 
             Runtime.getRuntime().gc();
         } catch (Exception e) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
+            logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s, localized-message: %s",
+                    invocationId, e.getMessage(), e.getCause(), e.getLocalizedMessage()));
         }
     }
 

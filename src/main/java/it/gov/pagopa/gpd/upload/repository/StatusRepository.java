@@ -68,10 +68,11 @@ public class StatusRepository {
     public synchronized Status getStatus(String invocationId, String id, String partitionKey) throws AppException {
         try {
             CosmosItemResponse<Status> response = container.readItem(id, new PartitionKey(partitionKey), Status.class);
+            logger.log(Level.INFO, () -> String.format("Read Status document with id %s response: %s", id, response.getStatusCode()));
             return response.getItem();
         } catch (CosmosException ex) {
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND.value()) {
-                logger.log(Level.INFO, () -> "Item with ID " + id);
+                logger.log(Level.INFO, () -> String.format("Read Status document with id %s not found", id));
                 return null;
             } else {
                 logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while reading status item, code: %s", invocationId, ex.getStatusCode()));
@@ -81,8 +82,6 @@ public class StatusRepository {
     }
 
     public synchronized void upsertStatus(String invocationId, String id, Status status) throws AppException {
-        logger.info("Upsert Status id " + id);
-
         try {
             CosmosItemResponse<Status> response = container.upsertItem(status, new CosmosItemRequestOptions());
             if(response.getStatusCode() < 200 || response.getStatusCode() > 299) {
@@ -95,7 +94,7 @@ public class StatusRepository {
         }
     }
 
-    public void partialUpdate(String id, String fiscalCode, LocalDateTime endDateTime) {
+    public boolean partialUpdate(String id, String fiscalCode, LocalDateTime endDateTime) {
         CosmosPatchOperations operations = CosmosPatchOperations
                 .create()
                 .replace("/upload/end", endDateTime);
@@ -105,6 +104,6 @@ public class StatusRepository {
                 operations,
                 Status.class
         );
-        response.getStatusCode();
+        return response.getStatusCode() == HttpStatus.OK.value();
     }
 }
