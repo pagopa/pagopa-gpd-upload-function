@@ -15,14 +15,13 @@ import java.util.logging.Logger;
 public class StatusService {
     private static volatile StatusService instance;
     private static StatusRepository statusRepository;
-    private Logger logger;
+    public Logger logger;
 
     public static StatusService getInstance(Logger logger) {
         if (instance == null) {
             synchronized (StatusService.class) {
                 if (instance == null) {
                     instance = new StatusService(logger);
-                    statusRepository = StatusRepository.getInstance(logger);
                 }
             }
         }
@@ -33,6 +32,7 @@ public class StatusService {
 
     public StatusService(Logger logger) {
         this.logger = logger;
+        statusRepository = StatusRepository.getInstance(logger);
     }
 
     public Status createStatus(String invocationId, String broker, String fiscalCode, String key, int totalPosition) throws AppException {
@@ -46,7 +46,7 @@ public class StatusService {
                                                           .responses(new ArrayList<>())
                                                           .start(LocalDateTime.now()).build())
                                           .build();
-        Status status = statusRepository.createIfNotExist(invocationId, key, fiscalCode, statusIfNotExist);
+        Status status = getStatusRepository().createIfNotExist(invocationId, key, fiscalCode, statusIfNotExist);
         if (status.upload.getEnd() != null) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Upload already processed. Upload finished at: %s", invocationId, status.upload.getEnd()));
             return status;
@@ -57,23 +57,23 @@ public class StatusService {
 
     // not thread safe could get an intermediate state
     public Status getStatus(String invocationId, String fiscalCode, String key) throws AppException {
-        return statusRepository.getStatus(invocationId, key, fiscalCode);
+        return getStatusRepository().getStatus(invocationId, key, fiscalCode);
     }
 
     // end-time partial update operation
     public boolean updateStatusEndTime(String fiscalCode, String key, LocalDateTime endTime) {
-        return statusRepository.partialUpdate(key, fiscalCode, endTime);
+        return getStatusRepository().partialUpdate(key, fiscalCode, endTime);
     }
 
     public synchronized void updateStatus(String invocationId, String fiscalCode, String key, List<ResponseEntry> entries) throws AppException {
         try {
-            Status status = statusRepository.getStatus(invocationId, key, fiscalCode);
+            Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
             for(ResponseEntry entry: entries) {
                 logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Add response %s", invocationId, entry.getStatusMessage()));
 
                 status.upload.addResponse(entry);
             }
-            statusRepository.upsertStatus(invocationId, status.id, status);
+            getStatusRepository().upsertStatus(invocationId, status.id, status);
         } catch (AppException e) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Error while update upload Status", "invocationId"));
             throw new AppException("Error while update upload Status");
