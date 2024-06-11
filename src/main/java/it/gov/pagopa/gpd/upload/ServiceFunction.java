@@ -52,7 +52,7 @@ public class ServiceFunction {
             Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
             if(status.upload.getCurrent() == status.upload.getTotal()) {
                 getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, LocalDateTime.now());
-                report(ctx, logger, key, msg.getBrokerCode(), orgFiscalCode);
+                report(logger, key, status);
             }
 
             Runtime.getRuntime().gc();
@@ -62,12 +62,11 @@ public class ServiceFunction {
         }
     }
 
-    private void report(ExecutionContext ctx, Logger logger, String uploadKey, String broker, String fiscalCode) throws AppException, JsonProcessingException {
+    public boolean report(Logger logger, String uploadKey, Status status) throws AppException, JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(new JavaTimeModule());
-        Status status = getStatusService(ctx).getStatus(ctx.getInvocationId(), fiscalCode, uploadKey);
-        BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), broker, fiscalCode, uploadKey + ".json");
+        return BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json");
     }
 
     private Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {
