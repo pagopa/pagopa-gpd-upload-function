@@ -164,6 +164,7 @@ class ServiceFunctionTest {
                                                 .responses(new ArrayList<>())
                                                 .build())
                                 .build();
-        Assertions.assertTrue(serviceFunction.report(mockLogger, "key", status));
+        // BlobRepository mocked false by default
+        Assertions.assertFalse(serviceFunction.report(mockLogger, "key", status));
     }
 }
