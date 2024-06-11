@@ -5,13 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
+import it.gov.pagopa.gpd.upload.model.CRUDOperation;
+import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
+import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
+import org.junit.Assert;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
@@ -27,6 +32,7 @@ class ValidationFunctionTest {
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
     private static MockedStatic<GPDValidator> positionValidatorMockedStatic;
     private MockedStatic<StatusService> mockedStaticStatusService;
+    private MockedStatic<QueueService> mockedStaticQueueService;
     private Logger mockLogger;
 
     @BeforeAll
@@ -40,11 +46,15 @@ class ValidationFunctionTest {
         StatusService mockStatusService = mock(StatusService.class);
         mockedStaticStatusService = mockStatic(StatusService.class);
         mockedStaticStatusService.when(() -> StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
+        QueueService mockQueueService = mock(QueueService.class);
+        mockedStaticQueueService = mockStatic(QueueService.class);
+        mockedStaticQueueService.when(() -> QueueService.getInstance(mockLogger)).thenReturn(mockQueueService);
     }
 
     @AfterEach
     public void tearDown() {
         mockedStaticStatusService.close();
+        mockedStaticQueueService.close();
     }
 
     @Test
@@ -145,6 +155,30 @@ class ValidationFunctionTest {
 
         // Run function and assert
         assertFalse(validationFunction.validateBlob(context, "broker", "fc", "key", malformedJSONData));
+    }
+
+    @Test
+    void runEnqueueCreateMessageTest() throws Exception {
+        // Prepare all mock response
+        when(context.getLogger()).thenReturn(mockLogger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+
+        // Run function method and assert
+        Assertions.assertFalse(
+                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.CREATE, new ArrayList<>(), null, "key", "code", "broker-id")
+        );
+    }
+
+    @Test
+    void runEnqueueDeleteMessageTest() throws Exception {
+        // Prepare all mock response
+        when(context.getLogger()).thenReturn(mockLogger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+
+        // Run function method and assert
+        Assertions.assertFalse(
+                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.DELETE, null, new ArrayList<>(), "key", "code", "broker-id")
+        );
     }
 
     @AfterAll
