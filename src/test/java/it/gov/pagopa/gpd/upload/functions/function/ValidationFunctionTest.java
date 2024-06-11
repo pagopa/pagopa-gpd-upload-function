@@ -54,7 +54,7 @@ class ValidationFunctionTest {
         when(context.getLogger()).thenReturn(logger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
         // Set mock event
-        String event = getMockBlobCreatedEventSize("1e+8");
+        String event = getMockBlobCreatedEventSize("10e+8");
         // Run function
         validationFunction.run(event, context);
         //Assertion
