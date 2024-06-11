@@ -7,10 +7,7 @@ import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -27,16 +24,10 @@ class ValidationFunctionTest {
 
     @Spy
     ValidationFunction validationFunction;
-
-    @Mock
-    private StatusService mockStatusService;
-
-    @Mock
-    private Logger mockLogger;
-
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
-
     private static MockedStatic<GPDValidator> positionValidatorMockedStatic;
+    private MockedStatic<StatusService> mockedStaticStatusService;
+    private Logger mockLogger;
 
     @BeforeAll
     public static void init() {
@@ -45,10 +36,15 @@ class ValidationFunctionTest {
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
-        // Mock the static getInstance method
-        mockStatic(StatusService.class);
-        when(StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
+        mockLogger = mock(Logger.class);
+        StatusService mockStatusService = mock(StatusService.class);
+        mockedStaticStatusService = mockStatic(StatusService.class);
+        mockedStaticStatusService.when(() -> StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
+    }
+
+    @AfterEach
+    public void tearDown() {
+        mockedStaticStatusService.close();
     }
 
     @Test
