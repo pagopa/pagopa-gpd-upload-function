@@ -142,7 +142,7 @@ public class ValidationFunction {
         QueueService queueService = QueueService.getInstance(ctx.getLogger());
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
         return switch (operation) {
-            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, QueueService.CHUNK_SIZE);
+            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
             case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
         };
     }
