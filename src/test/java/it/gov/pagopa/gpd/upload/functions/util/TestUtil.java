@@ -18,6 +18,7 @@ import lombok.experimental.UtilityClass;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +29,14 @@ public class TestUtil {
                 .operation(CRUDOperation.CREATE)
                 .paymentPositions(getMockDebtPositions().getPaymentPositions())
                 .build();
+    }
+
+    public static UploadInput getMockDeleteInputData() {
+        return UploadInput.builder()
+                       .operation(CRUDOperation.DELETE)
+                       .paymentPositions(null)
+                       .paymentPositionIUPDs(Arrays.asList("IUPD-1", "IUPD-2"))
+                       .build();
     }
 
     public static PaymentPositions getMockDebtPositions() {
