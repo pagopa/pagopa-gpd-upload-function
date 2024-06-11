@@ -42,19 +42,18 @@ public class ServiceFunction {
 
         try {
             QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
-            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
-            getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
-
+            // extract from message
             String key = msg.getUploadKey();
             String orgFiscalCode = msg.getOrganizationFiscalCode();
-
+            // process message request
+            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
+            getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
             if(status.upload.getCurrent() == status.upload.getTotal()) {
                 getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, LocalDateTime.now());
                 report(logger, key, status);
             }
-
             Runtime.getRuntime().gc();
         } catch (Exception e) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s, localized-message: %s",
