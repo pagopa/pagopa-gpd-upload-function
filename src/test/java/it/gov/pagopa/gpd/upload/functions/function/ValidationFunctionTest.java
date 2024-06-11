@@ -48,6 +48,34 @@ class ValidationFunctionTest {
     }
 
     @Test
+    void runSizeTooLarge() throws Exception {
+        // Prepare all mock response
+        Logger logger = Logger.getLogger("gpd-upload-test-logger");
+        when(context.getLogger()).thenReturn(logger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+        // Set mock event
+        String event = getMockBlobCreatedEventSize("1e+8");
+        // Run function
+        validationFunction.run(event, context);
+        //Assertion
+        assertTrue(true);
+    }
+
+    @Test
+    void runSizeZero() throws Exception {
+        // Prepare all mock response
+        Logger logger = Logger.getLogger("gpd-upload-test-logger");
+        when(context.getLogger()).thenReturn(logger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+        // Set mock event
+        String event = getMockBlobCreatedEventSize("0");
+        // Run function
+        validationFunction.run(event, context);
+        //Assertion
+        assertTrue(true);
+    }
+
+    @Test
     void runCreateOK() throws Exception {
         // Prepare all mock response
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
@@ -60,6 +88,25 @@ class ValidationFunctionTest {
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
         doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
+        // Set mock event
+        String event = getMockBlobCreatedEvent();
+        // Run function
+        validationFunction.run(event, context);
+        //Assertion
+        assertTrue(true);
+    }
+
+    @Test
+    void runInvalidBlob() throws Exception {
+        // Prepare all mock response
+        Logger logger = Logger.getLogger("gpd-upload-test-logger");
+        when(context.getLogger()).thenReturn(logger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
+        doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any());
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function

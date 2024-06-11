@@ -5,7 +5,6 @@ import com.azure.core.util.BinaryData;
 import com.azure.messaging.eventgrid.EventGridEvent;
 import com.azure.messaging.eventgrid.systemevents.StorageBlobCreatedEventData;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -45,11 +44,6 @@ public class ValidationFunction {
         Logger logger = context.getLogger();
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
-
-        if (eventGridEvents.isEmpty()) {
-            logger.log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Empty event list", context.getInvocationId(), "-"));
-            return; // skip event
-        }
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {

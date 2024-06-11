@@ -122,6 +122,21 @@ public class TestUtil {
         return event;
     }
 
+    public static String getMockBlobCreatedEventSize(String contentLength) {
+        String event = "{\"topic\":\"topic\"," +
+                               "\"subject\":\"/blobServices/default/containers/broker0001/blobs/ec0001/input/77777777777f3d1.json\"," +
+                               "\"eventType\":\"Microsoft.Storage.BlobCreated\",\"id\":\"id-test\"," +
+                               "\"data\":{\"api\":\"PutBlob\",\"clientRequestId\":\"client-request-id-test\"," +
+                               "\"requestId\":\"request-id-test\",\"eTag\":\"0x0\"," +
+                               "\"contentType\":\"application/json\",\"contentLength\":" + contentLength + "," +
+                               "\"blobType\":\"BlockBlob\",\"blobUrl\":\"blob-url-test\"," +
+                               "\"url\":\"url-test\"," +
+                               "\"sequencer\":\"sequencer-test\",\"identity\":\"identity-test\"," +
+                               "\"storageDiagnostics\":{\"batchId\":\"batch-id-test\"}},\"dataVersion\":\"\"," +
+                               "\"metadataVersion\":\"1\",\"eventTime\":\"2024-02-07T14:11:36.0505464Z\"}";
+        return event;
+    }
+
     public static Status getMockStatus() {
         return Status.builder()
                        .id("id")
