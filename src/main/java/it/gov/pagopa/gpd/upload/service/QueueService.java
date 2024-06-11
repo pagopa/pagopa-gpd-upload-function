@@ -22,7 +22,7 @@ public class QueueService {
     private static final String GPD_SA_CONNECTION_STRING = System.getenv("GPD_SA_CONNECTION_STRING");
     private static final String VALID_POSITIONS_QUEUE =
             System.getenv("VALID_POSITIONS_QUEUE") != null ? System.getenv("VALID_POSITIONS_QUEUE") : "VALID_POSITIONS_QUEUE";
-    public static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 30;
+    public static final Integer CHUNK_SIZE = System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 20;
     private CloudQueue cloudQueue;
     private Logger logger;
 
@@ -71,9 +71,7 @@ public class QueueService {
 
     public boolean enqueueDeleteMessage(ExecutionContext ctx, ObjectMapper om, List<String> IUPDList, QueueMessage.QueueMessageBuilder builder, int delay) {
         for (int i = 0; i < IUPDList.size(); i += CHUNK_SIZE) {
-            List<String> IUPDSubList = IUPDList.subList(i, Math.min(i + CHUNK_SIZE, IUPDList.size()));
-            QueueMessage message = builder.paymentPositionIUPDs(IUPDSubList).build();
-
+            QueueMessage message = builder.paymentPositionIUPDs(IUPDList).build();
             try {
                 enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
             } catch (Exception e) {
@@ -84,19 +82,11 @@ public class QueueService {
         return true;
     }
 
-    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay, int chunk_size) {
-        chunk_size = chunk_size > 0 ? chunk_size : CHUNK_SIZE;
-        for (int i = 0; i < paymentPositions.size(); i += chunk_size) {
-            List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + CHUNK_SIZE, paymentPositions.size()));
-            QueueMessage cloudMessage = builder.paymentPositions(positionSubList).build();
-
+    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay) {
+        for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
+            QueueMessage queueMessage = builder.paymentPositions(paymentPositions).build();
             try {
-                String message = om.writeValueAsString(cloudMessage);
-
-                if(message.length() > 64 * Constants.KB)
-                    enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunk_size/2);
-                else
-                    enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
+                enqueue(ctx.getInvocationId(), om.writeValueAsString(queueMessage), delay);
             } catch (Exception e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;

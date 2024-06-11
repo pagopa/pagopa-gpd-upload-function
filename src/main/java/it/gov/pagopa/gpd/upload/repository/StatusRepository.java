@@ -3,23 +3,24 @@ package it.gov.pagopa.gpd.upload.repository;
 import com.azure.cosmos.*;
 import com.azure.cosmos.models.CosmosItemRequestOptions;
 import com.azure.cosmos.models.CosmosItemResponse;
+import com.azure.cosmos.models.CosmosPatchOperations;
 import com.azure.cosmos.models.PartitionKey;
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 
+import java.time.LocalDateTime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class StatusRepository {
     private static volatile StatusRepository instance;
-    private String cosmosURI = System.getenv("COSMOS_URI");
-    private String cosmosKey = System.getenv("COSMOS_KEY");
-    private String databaseName = System.getenv("GPD_DB_NAME");
-    private String containerName = System.getenv("GPD_CONTAINER_NAME");
-    private CosmosClient cosmosClient;
+    private final String cosmosURI = System.getenv("COSMOS_URI");
+    private final String cosmosKey = System.getenv("COSMOS_KEY");
+    private final String databaseName = System.getenv("GPD_DB_NAME");
+    private final String containerName = System.getenv("GPD_CONTAINER_NAME");
     private CosmosContainer container;
-    private Logger logger;
+    private final Logger logger;
 
     public static StatusRepository getInstance(Logger logger) {
         if (instance == null) {
@@ -38,11 +39,11 @@ public class StatusRepository {
     }
 
     private void initCosmosClient() {
-        cosmosClient = new CosmosClientBuilder()
-                               .endpoint(cosmosURI)
-                               .key(cosmosKey)
-                               .consistencyLevel(ConsistencyLevel.EVENTUAL)
-                               .buildClient();
+        CosmosClient cosmosClient = new CosmosClientBuilder()
+                .endpoint(cosmosURI)
+                .key(cosmosKey)
+                .consistencyLevel(ConsistencyLevel.EVENTUAL)
+                .buildClient();
         container = cosmosClient.getDatabase(databaseName).getContainer(containerName);
     }
 
@@ -67,10 +68,11 @@ public class StatusRepository {
     public synchronized Status getStatus(String invocationId, String id, String partitionKey) throws AppException {
         try {
             CosmosItemResponse<Status> response = container.readItem(id, new PartitionKey(partitionKey), Status.class);
+            logger.log(Level.INFO, () -> String.format("Read Status document with id %s response: %s", id, response.getStatusCode()));
             return response.getItem();
         } catch (CosmosException ex) {
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND.value()) {
-                logger.log(Level.INFO, () -> "Item with ID " + id);
+                logger.log(Level.INFO, () -> String.format("Read Status document with id %s not found", id));
                 return null;
             } else {
                 logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while reading status item, code: %s", invocationId, ex.getStatusCode()));
@@ -80,8 +82,6 @@ public class StatusRepository {
     }
 
     public synchronized void upsertStatus(String invocationId, String id, Status status) throws AppException {
-        logger.info("Upsert Status id " + id);
-
         try {
             CosmosItemResponse<Status> response = container.upsertItem(status, new CosmosItemRequestOptions());
             if(response.getStatusCode() < 200 || response.getStatusCode() > 299) {
@@ -92,5 +92,18 @@ public class StatusRepository {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while upsert status item, code: %s, message: %s", invocationId, e.getStatusCode(), e.getMessage()));
             throw new AppException("Error while upsert Status item " + id);
         }
+    }
+
+    public boolean partialUpdate(String id, String fiscalCode, LocalDateTime endDateTime) {
+        CosmosPatchOperations operations = CosmosPatchOperations
+                .create()
+                .replace("/upload/end", endDateTime);
+        CosmosItemResponse<Status> response = container.patchItem(
+                id,
+                new PartitionKey(fiscalCode),
+                operations,
+                Status.class
+        );
+        return response.getStatusCode() == HttpStatus.OK.value();
     }
 }

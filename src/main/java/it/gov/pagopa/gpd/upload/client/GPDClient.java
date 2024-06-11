@@ -8,6 +8,7 @@ import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.model.RetryStep;
+import it.gov.pagopa.gpd.upload.util.MapUtils;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -80,9 +81,7 @@ public class GPDClient {
                                                  .header(HEADER_SUBSCRIPTION_KEY, GPD_SUBSCRIPTION_KEY)
                                                  .header(HEADER_REQUEST_ID, requestId);
 
-            Response response = builder.method(httpMethod, Entity.json(body));
-            logger.log(Level.INFO, () -> String.format("[requestId=%s][%sDebtPositions] Response: %s", requestId, httpMethod, response.getStatus()));
-            return response;
+            return builder.method(httpMethod, Entity.json(body));
         } catch (Exception e) {
             logger.log(Level.WARNING, () -> String.format("[requestId=%s][%sDebtPositions] Exception: %s", requestId, httpMethod, e.getMessage()));
             return Response.serverError().build();
@@ -98,7 +97,6 @@ public class GPDClient {
             responseGPD = ResponseGPD.builder()
                                   .retryStep(RetryStep.DONE)
                                   .status(status)
-                                  .detail(String.valueOf(status))
                                   .build();
         }
         else if (status >= 400 && status < 500) {
@@ -112,6 +110,8 @@ public class GPDClient {
                                   .retryStep(RetryStep.RETRY)
                                   .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
         }
+        responseGPD.setDetail(MapUtils.getDetail(HttpStatus.valueOf(status)));
+
         return responseGPD;
     }
 }

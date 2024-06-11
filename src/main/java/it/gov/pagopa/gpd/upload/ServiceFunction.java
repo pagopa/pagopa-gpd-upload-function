@@ -42,28 +42,30 @@ public class ServiceFunction {
 
         try {
             QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
+            // extract from message
+            String key = msg.getUploadKey();
+            String orgFiscalCode = msg.getOrganizationFiscalCode();
+            // process message request
             Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
             getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
-
             // check if upload is completed
-            Status status = getStatusService(ctx).getStatus(invocationId, msg.getOrganizationFiscalCode(), msg.getUploadKey());
+            Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
             if(status.upload.getCurrent() == status.upload.getTotal()) {
-                getStatusService(ctx).updateStatusEndTime(invocationId, status.fiscalCode, status.id, LocalDateTime.now());
-                report(ctx, logger, msg.getUploadKey(), msg.getBrokerCode(), msg.getOrganizationFiscalCode());
+                getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, LocalDateTime.now());
+                report(logger, key, status);
             }
-
             Runtime.getRuntime().gc();
         } catch (Exception e) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s", invocationId, e.getMessage(), e.getCause()));
+            logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s, localized-message: %s",
+                    invocationId, e.getMessage(), e.getCause(), e.getLocalizedMessage()));
         }
     }
 
-    private void report(ExecutionContext ctx, Logger logger, String uploadKey, String broker, String fiscalCode) throws AppException, JsonProcessingException {
+    public boolean report(Logger logger, String uploadKey, Status status) throws AppException, JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(new JavaTimeModule());
-        Status status = getStatusService(ctx).getStatus(ctx.getInvocationId(), fiscalCode, uploadKey);
-        BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), broker, fiscalCode, uploadKey + ".json");
+        return BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json");
     }
 
     private Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {

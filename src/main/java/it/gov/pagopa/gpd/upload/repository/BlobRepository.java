@@ -56,12 +56,12 @@ public class BlobRepository {
         return blobClient.downloadContent();
     }
 
-    public void uploadReport(String data, String broker, String fiscalCode, String filename) {
+    public boolean uploadReport(String data, String broker, String fiscalCode, String filename) {
         String blobPath = "/" + fiscalCode + "/" + OUTPUT_DIRECTORY + "/" + REPORT_SUFFIX + filename;
-        this.upload(data, broker, blobPath);
+        return this.upload(data, broker, blobPath);
     }
 
-    public void upload(String data, String container, String blobPath) {
+    public boolean upload(String data, String container, String blobPath) {
         try {
             blobServiceClient = new BlobServiceClientBuilder()
                                         .connectionString(connectionString)
@@ -73,8 +73,10 @@ public class BlobRepository {
                 logger.log(Level.SEVERE, () -> "container doesn't exist");
             BlobClient blobClient = blobContainerClient.getBlobClient(blobPath);
             blobClient.upload(BinaryData.fromString(data));
+            return true;
         } catch (BlobStorageException e) {
             logger.log(Level.SEVERE, () -> "BlobStorageException " + e.getMessage());
+            return false;
         }
     }
 }

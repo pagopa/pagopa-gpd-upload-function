@@ -5,7 +5,6 @@ import com.azure.core.util.BinaryData;
 import com.azure.messaging.eventgrid.EventGridEvent;
 import com.azure.messaging.eventgrid.systemevents.StorageBlobCreatedEventData;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -23,6 +22,7 @@ import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
  * Validation step act as a filter and is followed by the queuing step
  */
 public class ValidationFunction {
+    private static final String LOG_PREFIX = "[id=%s][upload=%s][ValidationFunction]:";
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
@@ -44,15 +45,9 @@ public class ValidationFunction {
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
 
-        if (eventGridEvents.isEmpty()) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Empty event list.", context.getInvocationId()));
-            return; // skip event
-        }
-
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
-                logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] Call event type %s handler.", context.getInvocationId(), event.getEventType()));
-
+                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Call event type %s handler.", context.getInvocationId(), "-", event.getEventType()));
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
                 if (blobData.getContentLength() > 1e+8) { // if file greater than 100 MB
@@ -64,8 +59,7 @@ public class ValidationFunction {
                     return; // skip event
                 }
 
-                logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] Blob event subject: %s", context.getInvocationId(), event.getSubject()));
-
+                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Blob event subject: %s", context.getInvocationId(), "-", event.getSubject()));
 
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-\\h]+\\.[Jj][Ss][Oo][Nn])");
                 Matcher matcher = pattern.matcher(event.getSubject());
@@ -76,11 +70,17 @@ public class ValidationFunction {
                     String fiscalCode = matcher.group(2);   // creditor institution directory
                     String filename = matcher.group(3);     // e.g. 77777777777c8a1.json
 
-                    logger.log(Level.INFO, () -> String.format("[id=%s][ValidationFunction] broker: %s, fiscalCode: %s, filename: %s", context.getInvocationId(), broker, fiscalCode, filename));
-
                     BinaryData content = this.downloadBlob(context, broker, fiscalCode, filename);
                     String key = filename.substring(0, filename.indexOf("."));
-                    this.validateBlob(context, broker, fiscalCode, key, content);
+
+                    logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "broker: %s, fiscalCode: %s, filename: %s",
+                            context.getInvocationId(), key, broker, fiscalCode, filename));
+                    try {
+                        if(!this.validateBlob(context, broker, fiscalCode, key, content))
+                            throw new AppException("Invalid blob");
+                    } catch (AppException e) {
+                        logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
+                    }
 
                     Runtime.getRuntime().gc();
                 } else {
@@ -90,7 +90,7 @@ public class ValidationFunction {
         }
     }
 
-    public boolean validateBlob(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, BinaryData content) {
+    public boolean validateBlob(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, BinaryData content) throws AppException {
         int size = 0;
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
@@ -121,12 +121,10 @@ public class ValidationFunction {
 
             // enqueue chunk and other input to form message
             return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
-        } catch (JsonMappingException e) {
-            // todo: in this case is a BAD_REQUEST -> update status
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
-            return false;
-        } catch (AppException | JsonProcessingException e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
+        } catch (JsonProcessingException e) {
+            ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Processing function JsonMappingException: %s, caused by: %s",
+                    ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause()));
+            StatusService.getInstance(ctx.getLogger()).updateStatusEndTime(fiscalCode, uploadKey, LocalDateTime.now());
             return false;
         }
     }
@@ -144,7 +142,7 @@ public class ValidationFunction {
         QueueService queueService = QueueService.getInstance(ctx.getLogger());
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
         return switch (operation) {
-            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, QueueService.CHUNK_SIZE);
+            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0);
             case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
         };
     }

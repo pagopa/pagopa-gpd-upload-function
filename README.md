@@ -1,9 +1,16 @@
-# pagoPA Functions template
+# GPD Upload Functions
 
-Java template to create an Azure Function.
+[![Code Review](https://github.com/pagopa/pagopa-gpd-upload-function/actions/workflows/code_review.yml/badge.svg)](https://github.com/pagopa/pagopa-gpd-upload-function/actions/workflows/code_review.yml)
+[![Integration Tests](https://github.com/pagopa/pagopa-gpd-upload/actions/workflows/integration_test.yml/badge.svg)](https://github.com/pagopa/pagopa-gpd-upload/actions/workflows/integration_test.yml)
 
-## Function examples
-There is an example of a Http Trigger function.
+A set of Azure functions related to debt positions massive upload.
+
+## Functions
+
+| Function            | Trigger      | Description                               |
+|---------------------|--------------|-------------------------------------------|
+| ValidationFunction  | QueueTrigger | Validate Blob on CreatedEvent             |
+| ServiceFunction     | QueueTrigger | Perform CRUD operations on debt-positions |
 
 ---
 
@@ -36,18 +43,3 @@ mvn -f pom.xml clean package -Dmaven.test.skip=true && mvn -e azure-functions:ru
 `curl http://localhost:7071/example` 
 
 ---
-
-
-## TODO
-Once cloned the repo, you should:
-- to deploy on standard Azure service:
-  - rename `deploy-pipelines-standard.yml` to `deploy-pipelines.yml`
-  - remove `helm` folder
-- to deploy on Kubernetes:
-  - rename `deploy-pipelines-aks.yml` to `deploy-pipelines.yml`
-  - customize `helm` configuration
-- configure the following GitHub action in `.github` folder: 
-  - `deploy.yml`
-  - `sonar_analysis.yml`
-
-Configure the SonarCloud project :point_right: [guide](https://pagopa.atlassian.net/wiki/spaces/DEVOPS/pages/147193860/SonarCloud+experimental).

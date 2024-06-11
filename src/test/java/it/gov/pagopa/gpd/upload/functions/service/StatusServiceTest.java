@@ -60,10 +60,8 @@ public class StatusServiceTest {
     @Test
     void updateStatusEndTimeOK() throws AppException {
         doReturn(statusRepository).when(statusService).getStatusRepository();
-        doReturn(getMockStatus()).when(statusRepository).getStatus(any(), any(), any());
-        doNothing().when(statusRepository).upsertStatus(any(), any(), any());
         //Assertion
-        assertNotNull(statusService.updateStatusEndTime(ctx.getInvocationId(), "fiscalCode", "key", LocalDateTime.now()));
+        assertNotNull(statusService.updateStatusEndTime("fiscalCode", "key", LocalDateTime.now()));
     }
 
     @Test
@@ -91,6 +89,7 @@ public class StatusServiceTest {
         doReturn(statusRepository).when(statusService).getStatusRepository();
         doReturn(getMockStatus()).when(statusRepository).getStatus(any(), any(), any());
         doNothing().when(statusRepository).upsertStatus(any(), any(), any());
+        statusService.logger = Logger.getLogger("JUnit-test");
         statusService.updateStatus(ctx.getInvocationId(), "fiscalCode", "key", getMockResponseEntries());
         //Assertion
         assertTrue(true);

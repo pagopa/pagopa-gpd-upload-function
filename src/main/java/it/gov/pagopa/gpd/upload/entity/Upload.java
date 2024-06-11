@@ -22,6 +22,7 @@ public class Upload {
     private LocalDateTime end;
 
     public void addResponse(ResponseEntry responseEntry) {
+        if(responses == null) responses = new ArrayList<>();
         // regardless of the condition increments the current counter because a list of IUPDs was processed
         current += responseEntry.requestIDs.size();
         for (ResponseEntry existingEntry : responses) {
