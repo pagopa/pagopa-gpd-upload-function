@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa.gpd.upload</groupId>
     <artifactId>gpd-upload-function</artifactId>
-    <version>0.0.17</version>
+    <version>0.0.17-1-fix-queue-service</version>
     <packaging>jar</packaging>
     <name>GPD-Upload-Function</name>
 
