@@ -89,15 +89,15 @@ public class QueueService {
 
         for (int i = 0; i < paymentPositions.size(); i += chunkSize) {
             List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + chunkSize, paymentPositions.size()));
-            QueueMessage cloudMessage = builder.paymentPositions(positionSubList).build();
+            QueueMessage queueMessage = builder.paymentPositions(positionSubList).build();
 
             try {
-                String message = om.writeValueAsString(cloudMessage);
+                String message = om.writeValueAsString(queueMessage);
 
                 if(message.length() > 64 * Constants.KB)
                     enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunkSize/2);
                 else
-                    enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
+                    enqueue(ctx.getInvocationId(), message, delay);
             } catch (Exception e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;
