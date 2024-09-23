@@ -71,7 +71,8 @@ public class QueueService {
 
     public boolean enqueueDeleteMessage(ExecutionContext ctx, ObjectMapper om, List<String> IUPDList, QueueMessage.QueueMessageBuilder builder, int delay) {
         for (int i = 0; i < IUPDList.size(); i += CHUNK_SIZE) {
-            QueueMessage message = builder.paymentPositionIUPDs(IUPDList).build();
+            List<String> IUPDSubList = IUPDList.subList(i, Math.min(i + CHUNK_SIZE, IUPDList.size()));
+            QueueMessage message = builder.paymentPositionIUPDs(IUPDSubList).build();
             try {
                 enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
             } catch (Exception e) {
@@ -82,11 +83,21 @@ public class QueueService {
         return true;
     }
 
-    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay) {
-        for (int i = 0; i < paymentPositions.size(); i += CHUNK_SIZE) {
-            QueueMessage queueMessage = builder.paymentPositions(paymentPositions).build();
+    public boolean enqueueUpsertMessage(ExecutionContext ctx, ObjectMapper om, List<PaymentPosition> paymentPositions, QueueMessage.QueueMessageBuilder builder, int delay, Integer chunkSize) {
+        chunkSize = chunkSize != null ? chunkSize : CHUNK_SIZE;
+        if(chunkSize == 0) return false;
+
+        for (int i = 0; i < paymentPositions.size(); i += chunkSize) {
+            List<PaymentPosition> positionSubList = paymentPositions.subList(i, Math.min(i + chunkSize, paymentPositions.size()));
+            QueueMessage queueMessage = builder.paymentPositions(positionSubList).build();
+
             try {
-                enqueue(ctx.getInvocationId(), om.writeValueAsString(queueMessage), delay);
+                String message = om.writeValueAsString(queueMessage);
+
+                if(message.length() > 64 * Constants.KB)
+                    enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunkSize/2);
+                else
+                    enqueue(ctx.getInvocationId(), message, delay);
             } catch (Exception e) {
                 ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][QueueService] Processing function exception: %s, caused by: %s", ctx.getInvocationId(), e.getMessage(), e.getCause()));
                 return false;

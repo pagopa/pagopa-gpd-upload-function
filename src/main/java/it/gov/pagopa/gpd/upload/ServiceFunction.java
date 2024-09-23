@@ -51,8 +51,10 @@ public class ServiceFunction {
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
             if(status.upload.getCurrent() == status.upload.getTotal()) {
-                getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, LocalDateTime.now());
-                report(logger, key, status);
+                LocalDateTime endTime = LocalDateTime.now();
+                status.upload.setEnd(endTime);
+                getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, endTime);
+                generateReport(logger, key, status);
             }
             Runtime.getRuntime().gc();
         } catch (Exception e) {
@@ -61,7 +63,7 @@ public class ServiceFunction {
         }
     }
 
-    public boolean report(Logger logger, String uploadKey, Status status) throws AppException, JsonProcessingException {
+    public boolean generateReport(Logger logger, String uploadKey, Status status) throws AppException, JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(new JavaTimeModule());

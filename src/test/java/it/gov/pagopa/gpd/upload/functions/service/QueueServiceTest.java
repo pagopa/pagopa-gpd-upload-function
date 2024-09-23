@@ -51,7 +51,7 @@ public class QueueServiceTest {
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(CRUDOperation.UPDATE, "key", "orgFiscalCode", "brokerCode");
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
-        queueService.enqueueUpsertMessage(context, om, List.of(TestUtil.getMockDebtPosition()), builder, 0);
+        queueService.enqueueUpsertMessage(context, om, List.of(TestUtil.getMockDebtPosition()), builder, 0, null);
     }
 
     @Test

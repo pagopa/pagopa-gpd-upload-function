@@ -8,7 +8,10 @@ import com.azure.cosmos.models.PartitionKey;
 import com.microsoft.azure.functions.HttpStatus;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
+import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,6 +23,7 @@ public class StatusRepository {
     private final String databaseName = System.getenv("GPD_DB_NAME");
     private final String containerName = System.getenv("GPD_CONTAINER_NAME");
     private CosmosContainer container;
+    ThrottlingRetryOptions throttlingRetryOptions = new ThrottlingRetryOptions();
     private final Logger logger;
 
     public static StatusRepository getInstance(Logger logger) {
@@ -39,10 +43,13 @@ public class StatusRepository {
     }
 
     private void initCosmosClient() {
+        throttlingRetryOptions.setMaxRetryWaitTime(Duration.ofMinutes(10));
+        throttlingRetryOptions.setMaxRetryAttemptsOnThrottledRequests(100);
         CosmosClient cosmosClient = new CosmosClientBuilder()
                 .endpoint(cosmosURI)
                 .key(cosmosKey)
                 .consistencyLevel(ConsistencyLevel.EVENTUAL)
+                .throttlingRetryOptions(throttlingRetryOptions)
                 .buildClient();
         container = cosmosClient.getDatabase(databaseName).getContainer(containerName);
     }
@@ -105,5 +112,17 @@ public class StatusRepository {
                 Status.class
         );
         return response.getStatusCode() == HttpStatus.OK.value();
+    }
+
+    private static RetryBackoffSpec getRetryPolicy() {
+        // Customize the retry policy for handling 429 status codes
+        return Retry.backoff(5, Duration.ofSeconds(1))
+                       .maxBackoff(Duration.ofSeconds(30))
+                       .filter(throwable -> throwable instanceof com.azure.cosmos.CosmosException &&
+                                                    ((com.azure.cosmos.CosmosException) throwable).getStatusCode() == 429)
+                       .doBeforeRetry(retrySignal -> {
+                           Logger.getLogger ("Retry", "Retry attempt #" + (retrySignal.totalRetries() + 1) +
+                                                              " after " + retrySignal.totalRetries() + " due to " + retrySignal.failure().getMessage());
+                       });
     }
 }

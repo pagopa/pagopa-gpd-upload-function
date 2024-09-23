@@ -12,7 +12,6 @@ import it.gov.pagopa.gpd.upload.entity.Upload;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
-import it.gov.pagopa.gpd.upload.service.StatusService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -165,6 +164,6 @@ class ServiceFunctionTest {
                                                 .build())
                                 .build();
         // BlobRepository mocked false by default
-        Assertions.assertFalse(serviceFunction.report(mockLogger, "key", status));
+        Assertions.assertFalse(serviceFunction.generateReport(mockLogger, "key", status));
     }
 }
