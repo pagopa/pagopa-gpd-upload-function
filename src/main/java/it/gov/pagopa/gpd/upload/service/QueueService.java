@@ -94,7 +94,7 @@ public class QueueService {
             try {
                 String message = om.writeValueAsString(queueMessage);
 
-                if(message.length() > 64 * Constants.KB)
+                if(message.length() > 64 * Constants.KB) // 64 KB is the max size for the queue message
                     enqueueUpsertMessage(ctx, om, positionSubList, builder, delay, chunkSize/2);
                 else
                     enqueue(ctx.getInvocationId(), message, delay);
