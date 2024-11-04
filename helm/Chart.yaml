@@ -2,8 +2,8 @@ apiVersion: v2
 name: pagopa-gpd-upload-function
 description: Microservice description
 type: application
-version: 0.100.0
-appVersion: 0.1.1
+version: 0.101.0
+appVersion: 0.1.1-1-PAGOPA-2329-gpd-upload
 dependencies:
   - name: microservice-chart
     version: 2.4.0
