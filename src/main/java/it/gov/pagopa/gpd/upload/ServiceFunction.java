@@ -58,8 +58,8 @@ public class ServiceFunction {
             }
             Runtime.getRuntime().gc();
         } catch (Exception e) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, caused by: %s, localized-message: %s",
-                    invocationId, e.getMessage(), e.getCause(), e.getLocalizedMessage()));
+            logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, message: %s, caused by: %s, localized-message: %s",
+                    invocationId, e.getClass(), e.getMessage(), e.getCause(), e.getLocalizedMessage()));
         }
     }
 
