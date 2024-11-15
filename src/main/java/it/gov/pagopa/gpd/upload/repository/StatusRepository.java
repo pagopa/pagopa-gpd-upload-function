@@ -48,7 +48,7 @@ public class StatusRepository {
         CosmosClient cosmosClient = new CosmosClientBuilder()
                 .endpoint(cosmosURI)
                 .key(cosmosKey)
-                .consistencyLevel(ConsistencyLevel.EVENTUAL)
+                .consistencyLevel(ConsistencyLevel.SESSION)
                 .throttlingRetryOptions(throttlingRetryOptions)
                 .buildClient();
         container = cosmosClient.getDatabase(databaseName).getContainer(containerName);
