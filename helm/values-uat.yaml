@@ -10,14 +10,14 @@ microservice-chart:
   livenessProbe:
     httpGet:
       path: /info
-      port: 80
+      port: 8080
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /info
-      port: 80
+      port: 8080
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
@@ -31,18 +31,18 @@ microservice-chart:
         targetPort: 12345
         path: /metrics
   ports:
-    - 80 #http
+    - 8080 #http
     - 12345 #jmx-exporter
   service:
     type: ClusterIP
     ports:
-      - 80 #http
+      - 8080 #http
       - 12345 #jmx-exporter
   ingress:
     create: true
     host: "weuuat.gps.internal.uat.platform.pagopa.it"
     path: /pagopa-gpd-upload-function/(.*)
-    servicePort: 80
+    servicePort: 8080
   serviceAccount:
     name: "gps-workload-identity"
   azure:
@@ -81,6 +81,7 @@ microservice-chart:
   envConfig:
     WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
     FUNCTIONS_WORKER_RUNTIME: "java"
+    ASPNETCORE_URLS: "http://*:8080"
     GPD_HOST: "https://api.uat.platform.pagopa.it/gpd/api"
     RETRY_MAX_ATTEMPTS: "1"
     RETRY_MAX_DELAY: "10000"
