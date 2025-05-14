@@ -2,9 +2,9 @@ apiVersion: v2
 name: pagopa-gpd-upload-function
 description: Microservice description
 type: application
-version: 0.103.0
-appVersion: 0.1.3
+version: 0.105.0
+appVersion: 0.1.5-PIDM-491-workload-identity
 dependencies:
   - name: microservice-chart
-    version: 2.4.0
+    version: 7.5.0
     repository: "https://pagopa.github.io/aks-microservice-chart-blueprint"
