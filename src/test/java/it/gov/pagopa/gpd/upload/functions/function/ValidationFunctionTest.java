@@ -6,11 +6,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
-import org.junit.Assert;
+import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
+
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
@@ -94,9 +94,9 @@ class ValidationFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
-        doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
-        doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
-        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
+        lenient().doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
+        lenient().doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
@@ -115,8 +115,8 @@ class ValidationFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
-        doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
-        doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any());
+        lenient().doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any());
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function
@@ -179,6 +179,35 @@ class ValidationFunctionTest {
         Assertions.assertFalse(
                 validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.DELETE, null, new ArrayList<>(), "key", "code", "broker-id")
         );
+    }
+    
+    @Test
+    void runSkipDuplicateEventSubject() {
+    	// Prepare all mock response
+        when(context.getLogger()).thenReturn(mockLogger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+
+        // Build a minimal EventGridEvent string payload
+        String subject = "/containers/demo/blobs/demo/input/demo.json";
+        String events = "[{" +
+                "\"id\":\"1\"," +
+                "\"eventType\":\"Microsoft.Storage.BlobCreated\"," +
+                "\"subject\":\"" + subject + "\"," +
+                "\"data\":{\"contentLength\":1024}," +
+                "\"eventTime\":\"2023-01-01T00:00:00Z\"," +
+                "\"dataVersion\":\"1.0\"" +
+                "}]";
+
+        // Lock it manually to simulate a previous processing
+        assertTrue(IdempotencyUploadTracker.tryLock(subject));
+
+        validationFunction.run(events, context);
+
+        // Assert
+        verify(mockLogger).warning(contains("Upload already in progress for key"));
+        
+        // Cleanup
+        IdempotencyUploadTracker.unlock(subject);
     }
 
     @AfterAll

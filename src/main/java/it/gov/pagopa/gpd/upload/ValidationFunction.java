@@ -21,6 +21,7 @@ import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
+import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,8 @@ public class ValidationFunction {
         Logger logger = context.getLogger();
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
+        
+        String eventSubject = "/containers/NA/blobs/NA/NA.json";
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
@@ -63,6 +66,15 @@ public class ValidationFunction {
 
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-\\h]+\\.[Jj][Ss][Oo][Nn])");
                 Matcher matcher = pattern.matcher(event.getSubject());
+                
+                // Attempt to acquire a lock for the current upload event to ensure idempotency.
+                // If another instance is already processing the same upload (same subject),
+                // skip processing to avoid duplicate handling of the same file.
+                eventSubject = event.getSubject();
+                if (!IdempotencyUploadTracker.tryLock(eventSubject)) {
+                	logger.warning("[invocationId=" + context.getInvocationId() + "][ValidationFunction] Upload already in progress for key: " + event.getSubject());
+                	return; // skip event
+                }
 
                 // Check if the pattern is found
                 if (matcher.find()) {
@@ -80,11 +92,15 @@ public class ValidationFunction {
                             throw new AppException("Invalid blob");
                     } catch (AppException e) {
                         logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
+                        // Unlock idempotency key
+                        IdempotencyUploadTracker.unlock(eventSubject);
                     }
 
                     Runtime.getRuntime().gc();
                 } else {
                     logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", context.getInvocationId()));
+                    // Unlock idempotency key
+                    IdempotencyUploadTracker.unlock(eventSubject);
                 }
             }
         }
