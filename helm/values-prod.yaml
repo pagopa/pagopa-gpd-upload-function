@@ -10,19 +10,20 @@ microservice-chart:
   livenessProbe:
     httpGet:
       path: /info
-      port: 80
+      port: 8080
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /info
-      port: 80
+      port: 8080
     initialDelaySeconds: 60
     failureThreshold: 6
     periodSeconds: 10
   deployment:
     create: true
+    replicas: 1
   serviceMonitor:
     create: true
     endpoints:
@@ -30,22 +31,22 @@ microservice-chart:
         targetPort: 12345
         path: /metrics
   ports:
-    - 80 #http
+    - 8080 #http
     - 12345 #jmx-exporter
   service:
     type: ClusterIP
     ports:
-      - 80 #http
+      - 8080 #http
       - 12345 #jmx-exporter
   ingress:
     create: true
     host: "weuprod.gps.internal.platform.pagopa.it"
     path: /pagopa-gpd-upload-function/(.*)
-    servicePort: 80
+    servicePort: 8080
   serviceAccount:
-    create: false
-    annotations: {}
-    name: ""
+    name: "gps-workload-identity"
+  azure:
+    workloadIdentityClientId: <workload-identity-client-id-set-automatically-by-gha>
   podAnnotations: {}
   podSecurityContext:
     seccompProfile:
@@ -80,6 +81,7 @@ microservice-chart:
   envConfig:
     WEBSITE_SITE_NAME: "pagopa-p-gpd-upload-function" # required to show cloud role name in application insights # TODO
     FUNCTIONS_WORKER_RUNTIME: "java"
+    ASPNETCORE_URLS: "http://*:8080"
     GPD_HOST: "https://api.platform.pagopa.it/gpd/api"
     BLOCK_SIZE: "10"
     COSMOS_URI: "https://pagopa-p-weu-gps-cosmos-account.documents.azure.com:443/"
