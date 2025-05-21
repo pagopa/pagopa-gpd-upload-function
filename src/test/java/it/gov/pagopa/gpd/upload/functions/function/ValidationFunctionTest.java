@@ -17,6 +17,8 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
@@ -36,12 +38,12 @@ class ValidationFunctionTest {
     private Logger mockLogger;
 
     @BeforeAll
-    public static void init() {
+    static void init() {
         positionValidatorMockedStatic = mockStatic(GPDValidator.class);
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         mockLogger = mock(Logger.class);
         StatusService mockStatusService = mock(StatusService.class);
         mockedStaticStatusService = mockStatic(StatusService.class);
@@ -52,7 +54,7 @@ class ValidationFunctionTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         mockedStaticStatusService.close();
         mockedStaticQueueService.close();
     }
@@ -183,35 +185,42 @@ class ValidationFunctionTest {
     
     @Test
     void runSkipDuplicateEventSubject() {
-    	// Prepare all mock response
+        // Prepare all mock response
         when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
 
-        // Build a minimal EventGridEvent string payload
-        String subject = "/containers/demo/blobs/demo/input/demo.json";
+        String broker = "demo";
+        String fiscalCode = "demo";
+        String filename = "demo.json";
+        String eventSubject = String.format("/containers/%s/blobs/%s/input/%s", broker, fiscalCode, filename);
+
         String events = "[{" +
                 "\"id\":\"1\"," +
                 "\"eventType\":\"Microsoft.Storage.BlobCreated\"," +
-                "\"subject\":\"" + subject + "\"," +
+                "\"subject\":\"" + eventSubject + "\"," +
                 "\"data\":{\"contentLength\":1024}," +
                 "\"eventTime\":\"2023-01-01T00:00:00Z\"," +
                 "\"dataVersion\":\"1.0\"" +
                 "}]";
+       
+        String lockSubject = String.format("/containers/%s/blobs/%s/%s", broker, fiscalCode, "demo");
+        assertTrue(IdempotencyUploadTracker.tryLock(lockSubject));
 
-        // Lock it manually to simulate a previous processing
-        assertTrue(IdempotencyUploadTracker.tryLock(subject));
-
+        // Run
         validationFunction.run(events, context);
 
-        // Assert
-        verify(mockLogger).warning(contains("Upload already in progress for key"));
-        
+        verify(mockLogger).log(
+            eq(Level.WARNING),
+            argThat((Supplier<String> supplier) ->
+                supplier != null && supplier.get().contains("Upload already in progress"))
+        );
+
         // Cleanup
-        IdempotencyUploadTracker.unlock(subject);
+        IdempotencyUploadTracker.unlock(lockSubject);
     }
 
     @AfterAll
-    public static void close() {
+    static void close() {
         positionValidatorMockedStatic.close();
     }
 }

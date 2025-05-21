@@ -47,7 +47,7 @@ public class ValidationFunction {
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
         
         String subjectFormat = "/containers/%s/blobs/%s/%s";
-        String subject = String.format(subjectFormat,"NA","NA","NA");
+        String subject;
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
@@ -81,7 +81,7 @@ public class ValidationFunction {
                     subject = String.format(subjectFormat,
                     		broker,fiscalCode,key);
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
-                    	logger.log(Level.WARNING, String.format(LOG_PREFIX + "Upload already in progress for key: %s", context.getInvocationId(), "-", subject));         	
+                    	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));         	
                     	return; // skip event
                     }
 

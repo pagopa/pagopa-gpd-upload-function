@@ -53,7 +53,7 @@ class ServiceFunctionTest {
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         mockLogger = mock(Logger.class);
         // mock BlobRepository
         BlobRepository mockBlobRepository = mock(BlobRepository.class);
@@ -62,7 +62,7 @@ class ServiceFunctionTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         mockedStaticBlobRepository.close();
     }
 
@@ -179,7 +179,6 @@ class ServiceFunctionTest {
     @Test
     void runUnlocksIdempotencyKeyWhenUploadCompletes() throws Exception {
         ExecutionContext mockContext = mock(ExecutionContext.class);
-        Logger mockLogger = mock(Logger.class);
         when(mockContext.getLogger()).thenReturn(mockLogger);
         when(mockContext.getInvocationId()).thenReturn("testInvocationId");
 
@@ -222,7 +221,7 @@ class ServiceFunctionTest {
             serviceFunction.run(messageJson, mockContext);
 
             // Assert
-            String expectedSubject = "/containers/broker123/blobs/org123/uploadKey123.json";
+            String expectedSubject = "/containers/broker123/blobs/org123/uploadKey123";
             mockedIdempotency.verify(() -> IdempotencyUploadTracker.unlock(expectedSubject), atLeastOnce());
         }
     }

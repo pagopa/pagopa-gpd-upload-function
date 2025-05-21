@@ -11,6 +11,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class IdempotencyUploadTracker {
 	
+	private IdempotencyUploadTracker() {
+		// Prevent instantiation
+	}
+	
 	// Key -> timestamp of insertion
     private static final Map<String, Instant> inProgress = new ConcurrentHashMap<>();
 
