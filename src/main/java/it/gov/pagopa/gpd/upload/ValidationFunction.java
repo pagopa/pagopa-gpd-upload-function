@@ -81,7 +81,7 @@ public class ValidationFunction {
                     subject = String.format(subjectFormat,
                     		broker,fiscalCode,key);
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
-                    	logger.log(Level.WARNING, String.format(LOG_PREFIX + "Upload already in progress for key: %s", context.getInvocationId(), "-", subject));         	
+                    	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));         	
                     	return; // skip event
                     }
 

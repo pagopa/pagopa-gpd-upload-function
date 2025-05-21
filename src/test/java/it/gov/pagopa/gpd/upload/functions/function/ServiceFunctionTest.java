@@ -222,7 +222,7 @@ class ServiceFunctionTest {
             serviceFunction.run(messageJson, mockContext);
 
             // Assert
-            String expectedSubject = "/containers/broker123/blobs/org123/uploadKey123.json";
+            String expectedSubject = "/containers/broker123/blobs/org123/uploadKey123";
             mockedIdempotency.verify(() -> IdempotencyUploadTracker.unlock(expectedSubject), atLeastOnce());
         }
     }
