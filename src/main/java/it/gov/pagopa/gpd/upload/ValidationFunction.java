@@ -81,7 +81,7 @@ public class ValidationFunction {
                     subject = String.format(subjectFormat,
                     		broker,fiscalCode,key);
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
-                    	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));         	
+                    	logger.log(Level.WARNING, String.format(LOG_PREFIX + "Upload already in progress for key: %s", context.getInvocationId(), "-", subject));         	
                     	return; // skip event
                     }
 
@@ -95,7 +95,6 @@ public class ValidationFunction {
                     } catch (AppException e) {
                         logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
                         // Unlock idempotency key
-                        logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "after exception unlock idempotency key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));
                         IdempotencyUploadTracker.unlock(subject);
                     }
 
