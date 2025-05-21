@@ -72,7 +72,7 @@ public class ValidationFunction {
                 // skip processing to avoid duplicate handling of the same file.
                 eventSubject = event.getSubject();
                 if (!IdempotencyUploadTracker.tryLock(eventSubject)) {
-                	logger.warning("[invocationId=" + context.getInvocationId() + "][ValidationFunction] Upload already in progress for key: " + event.getSubject());
+                	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));         	
                 	return; // skip event
                 }
 
@@ -93,6 +93,7 @@ public class ValidationFunction {
                     } catch (AppException e) {
                         logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
                         // Unlock idempotency key
+                        logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "after exception unlock idempotency key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));
                         IdempotencyUploadTracker.unlock(eventSubject);
                     }
 
@@ -100,6 +101,7 @@ public class ValidationFunction {
                 } else {
                     logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", context.getInvocationId()));
                     // Unlock idempotency key
+                    logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "No match found in the input string, unlock idempotency key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));
                     IdempotencyUploadTracker.unlock(eventSubject);
                 }
             }

@@ -31,6 +31,7 @@ import java.util.logging.Logger;
  * Following function handles request to GPD and update STATUS and REPORT
  */
 public class ServiceFunction {
+	private static final String LOG_PREFIX = "[id=%s][ServiceFunction]:";
 
     @FunctionName("PaymentPositionDequeueFunction")
     public void run(
@@ -42,12 +43,15 @@ public class ServiceFunction {
         objectMapper.registerModule(new JavaTimeModule());
         String subjectFormat = "/containers/%s/blobs/%s/%s.json";       
         String subject = String.format(subjectFormat,"NA","NA","NA");
+        String messageToLog = "";
         try {
             QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
             // extract from message
             String key = msg.getUploadKey();
             String orgFiscalCode = msg.getOrganizationFiscalCode();
             // process message request
+            messageToLog = String.format(LOG_PREFIX + "process message request [brokerCode=%s, fiscalCode=%s, updloadKey=%s]",ctx.getInvocationId(), msg.getBrokerCode(), msg.getOrganizationFiscalCode(), msg.getUploadKey());
+            logger.info(messageToLog);
             Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
             getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
             // check if upload is completed
@@ -56,6 +60,8 @@ public class ServiceFunction {
             	subject = String.format(subjectFormat,
             			msg.getBrokerCode(),msg.getOrganizationFiscalCode(),msg.getUploadKey());
             	// Unlock idempotency key
+            	messageToLog = String.format(LOG_PREFIX + "unlock idempotency key: %s, inProgress: %s", invocationId, subject, IdempotencyUploadTracker.getInProgress());
+            	logger.info(messageToLog);
             	IdempotencyUploadTracker.unlock(subject);
                 LocalDateTime endTime = LocalDateTime.now();
                 status.upload.setEnd(endTime);
@@ -67,7 +73,10 @@ public class ServiceFunction {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, message: %s, caused by: %s, localized-message: %s",
                     invocationId, e.getClass(), e.getMessage(), e.getCause(), e.getLocalizedMessage()));
             // Unlock idempotency key
+            messageToLog = String.format(LOG_PREFIX + "after exception unlock idempotency key: %s, inProgress: %s", invocationId, subject, IdempotencyUploadTracker.getInProgress());
+        	logger.info(messageToLog);
             IdempotencyUploadTracker.unlock(subject);
+            
         }
     }
 
