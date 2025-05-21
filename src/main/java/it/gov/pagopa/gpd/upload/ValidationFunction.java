@@ -46,7 +46,8 @@ public class ValidationFunction {
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
         
-        String eventSubject = "/containers/NA/blobs/NA/NA.json";
+        String subjectFormat = "/containers/%s/blobs/%s/%s";
+        String subject = String.format(subjectFormat,"NA","NA","NA");
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
@@ -66,25 +67,26 @@ public class ValidationFunction {
 
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-\\h]+\\.[Jj][Ss][Oo][Nn])");
                 Matcher matcher = pattern.matcher(event.getSubject());
-                
-                // Attempt to acquire a lock for the current upload event to ensure idempotency.
-                // If another instance is already processing the same upload (same subject),
-                // skip processing to avoid duplicate handling of the same file.
-                eventSubject = event.getSubject();
-                if (!IdempotencyUploadTracker.tryLock(eventSubject)) {
-                	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));         	
-                	return; // skip event
-                }
 
                 // Check if the pattern is found
                 if (matcher.find()) {
                     String broker = matcher.group(1);    // broker container as broke_code
                     String fiscalCode = matcher.group(2);   // creditor institution directory
                     String filename = matcher.group(3);     // e.g. 77777777777c8a1.json
+                    String key = filename.substring(0, filename.indexOf("."));
+                    
+                    // Attempt to acquire a lock for the current upload event to ensure idempotency.
+                    // If another instance is already processing the same upload (same subject),
+                    // skip processing to avoid duplicate handling of the same file.
+                    subject = String.format(subjectFormat,
+                    		broker,fiscalCode,key);
+                    if (!IdempotencyUploadTracker.tryLock(subject)) {
+                    	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));         	
+                    	return; // skip event
+                    }
 
                     BinaryData content = this.downloadBlob(context, broker, fiscalCode, filename);
-                    String key = filename.substring(0, filename.indexOf("."));
-
+                    
                     logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "broker: %s, fiscalCode: %s, filename: %s",
                             context.getInvocationId(), key, broker, fiscalCode, filename));
                     try {
@@ -94,15 +96,12 @@ public class ValidationFunction {
                         logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
                         // Unlock idempotency key
                         logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "after exception unlock idempotency key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));
-                        IdempotencyUploadTracker.unlock(eventSubject);
+                        IdempotencyUploadTracker.unlock(subject);
                     }
 
                     Runtime.getRuntime().gc();
                 } else {
                     logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", context.getInvocationId()));
-                    // Unlock idempotency key
-                    logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "No match found in the input string, unlock idempotency key: %s, inProgress: %s", context.getInvocationId(), "-", event.getSubject(), IdempotencyUploadTracker.getInProgress()));
-                    IdempotencyUploadTracker.unlock(eventSubject);
                 }
             }
         }

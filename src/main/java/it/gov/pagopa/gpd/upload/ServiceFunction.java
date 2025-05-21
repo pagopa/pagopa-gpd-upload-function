@@ -41,7 +41,7 @@ public class ServiceFunction {
         String invocationId = ctx.getInvocationId();
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        String subjectFormat = "/containers/%s/blobs/%s/%s.json";       
+        String subjectFormat = "/containers/%s/blobs/%s/%s";       
         String subject = String.format(subjectFormat,"NA","NA","NA");
         String messageToLog = "";
         try {
