@@ -21,7 +21,7 @@ resource "github_repository_environment" "github_repository_environment" {
 
 locals {
   env_secrets = {
-    "CD_CLIENT_ID" : data.azurerm_user_assigned_identity.identity_cd.client_id,
+    "CLIENT_ID" : data.azurerm_user_assigned_identity.identity_cd_01.client_id, 
     # <placeholder>
     # "CT_CLIENT_ID" : data.azurerm_user_assigned_identity.identity_ct.client_id,
     "TENANT_ID" : data.azurerm_client_config.current.tenant_id,
@@ -34,6 +34,7 @@ locals {
     "CLUSTER_NAME" : local.aks_cluster.name,
     "CLUSTER_RESOURCE_GROUP" : local.aks_cluster.resource_group_name,
     "NAMESPACE" : local.domain,
+    "WORKLOAD_IDENTITY_ID": data.azurerm_user_assigned_identity.workload_identity_clientid.client_id
   }
   repo_secrets = {
     "SONAR_TOKEN" : data.azurerm_key_vault_secret.key_vault_sonar.value,

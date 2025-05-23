@@ -9,9 +9,17 @@ import it.gov.pagopa.gpd.upload.ServiceFunction;
 import it.gov.pagopa.gpd.upload.client.GPDClient;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.entity.Upload;
+import it.gov.pagopa.gpd.upload.entity.UpsertMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
+import it.gov.pagopa.gpd.upload.model.RequestGPD;
+import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
+import it.gov.pagopa.gpd.upload.service.CRUDService;
+import it.gov.pagopa.gpd.upload.service.StatusService;
+import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
@@ -44,7 +53,7 @@ class ServiceFunctionTest {
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         mockLogger = mock(Logger.class);
         // mock BlobRepository
         BlobRepository mockBlobRepository = mock(BlobRepository.class);
@@ -53,7 +62,7 @@ class ServiceFunctionTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         mockedStaticBlobRepository.close();
     }
 
@@ -165,5 +174,55 @@ class ServiceFunctionTest {
                                 .build();
         // BlobRepository mocked false by default
         Assertions.assertFalse(serviceFunction.generateReport(mockLogger, "key", status));
+    }
+    
+    @Test
+    void runUnlocksIdempotencyKeyWhenUploadCompletes() throws Exception {
+        ExecutionContext mockContext = mock(ExecutionContext.class);
+        when(mockContext.getLogger()).thenReturn(mockLogger);
+        when(mockContext.getInvocationId()).thenReturn("testInvocationId");
+
+        QueueMessage message = new QueueMessage();
+        message.setUploadKey("uploadKey123");
+        message.setOrganizationFiscalCode("org123");
+        message.setBrokerCode("broker123");
+
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        String messageJson = mapper.writeValueAsString(message);
+
+        try (
+            MockedStatic<IdempotencyUploadTracker> mockedIdempotency = mockStatic(IdempotencyUploadTracker.class);
+            MockedStatic<StatusService> mockedStatusService = mockStatic(StatusService.class);
+        ) {
+            StatusService mockStatusService = mock(StatusService.class);
+            Status mockStatus = new Status();
+            mockStatus.upload = new Upload();
+            mockStatus.upload.setCurrent(5);
+            mockStatus.upload.setTotal(5);
+
+            mockedStatusService.when(() -> StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
+            when(mockStatusService.getStatus("testInvocationId", "org123", "uploadKey123")).thenReturn(mockStatus);
+
+            when(mockStatusService.updateStatusEndTime(eq("org123"), eq("uploadKey123"), any())).thenReturn(false);
+
+            Function<RequestGPD, ResponseGPD> dummyFunction = new Function<>() {
+                @Override
+                public ResponseGPD apply(RequestGPD requestGPD) {
+                    return new ResponseGPD();
+                }
+            };
+           
+            doReturn(dummyFunction).when(serviceFunction).getMethod(any(), any());
+            doReturn(mock(CRUDService.class)).when(serviceFunction).getOperationService(any(), any(), any());
+            doReturn(mock(GPDClient.class)).when(serviceFunction).getGPDClient(any());
+            doReturn(mock(UpsertMessage.class)).when(serviceFunction).getPositionMessage(any());
+
+            serviceFunction.run(messageJson, mockContext);
+
+            // Assert
+            String expectedSubject = "/containers/broker123/blobs/org123/uploadKey123";
+            mockedIdempotency.verify(() -> IdempotencyUploadTracker.unlock(expectedSubject), atLeastOnce());
+        }
     }
 }
