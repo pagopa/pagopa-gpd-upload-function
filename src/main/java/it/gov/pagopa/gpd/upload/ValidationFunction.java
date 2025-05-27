@@ -21,6 +21,7 @@ import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
+import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,9 @@ public class ValidationFunction {
         Logger logger = context.getLogger();
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
+        
+        String subjectFormat = "/containers/%s/blobs/%s/%s";
+        String subject;
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
@@ -69,10 +73,20 @@ public class ValidationFunction {
                     String broker = matcher.group(1);    // broker container as broke_code
                     String fiscalCode = matcher.group(2);   // creditor institution directory
                     String filename = matcher.group(3);     // e.g. 77777777777c8a1.json
+                    String key = filename.substring(0, filename.indexOf("."));
+                    
+                    // Attempt to acquire a lock for the current upload event to ensure idempotency.
+                    // If another instance is already processing the same upload (same subject),
+                    // skip processing to avoid duplicate handling of the same file.
+                    subject = String.format(subjectFormat,
+                    		broker,fiscalCode,key);
+                    if (!IdempotencyUploadTracker.tryLock(subject)) {
+                    	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));         	
+                    	return; // skip event
+                    }
 
                     BinaryData content = this.downloadBlob(context, broker, fiscalCode, filename);
-                    String key = filename.substring(0, filename.indexOf("."));
-
+                    
                     logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "broker: %s, fiscalCode: %s, filename: %s",
                             context.getInvocationId(), key, broker, fiscalCode, filename));
                     try {
@@ -80,6 +94,8 @@ public class ValidationFunction {
                             throw new AppException("Invalid blob");
                     } catch (AppException e) {
                         logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
+                        // Unlock idempotency key
+                        IdempotencyUploadTracker.unlock(subject);
                     }
 
                     Runtime.getRuntime().gc();
