@@ -23,7 +23,6 @@ microservice-chart:
     periodSeconds: 10
   deployment:
     create: true
-    replicas: 1
   serviceMonitor:
     create: true
     endpoints:
@@ -56,7 +55,7 @@ microservice-chart:
   resources:
     requests:
       memory: "1Gi"
-      cpu: "0.25"
+      cpu: "0.3"
     limits:
       memory: "2Gi"
       cpu: "0.75"
@@ -79,7 +78,7 @@ microservice-chart:
           value: "75"
   fileConfig: {}
   envConfig:
-    WEBSITE_SITE_NAME: "pagopa-p-gpd-upload-function" # required to show cloud role name in application insights # TODO
+    WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
     FUNCTIONS_WORKER_RUNTIME: "java"
     ASPNETCORE_URLS: "http://*:8080"
     GPD_HOST: "https://api.platform.pagopa.it/gpd/api"

@@ -23,7 +23,6 @@ microservice-chart:
     periodSeconds: 10
   deployment:
     create: true
-    replicas: 1
   serviceMonitor:
     create: true
     endpoints:
@@ -55,8 +54,8 @@ microservice-chart:
     allowPrivilegeEscalation: false
   resources:
     requests:
-      memory: "2Gi"
-      cpu: "0.5"
+      memory: "1.5Gi"
+      cpu: "0.4"
     limits:
       memory: "2Gi"
       cpu: "0.5"
@@ -76,7 +75,7 @@ microservice-chart:
         metadata:
           # Required
           type: Utilization # Allowed types are 'Utilization' or 'AverageValue'
-          value: "70"
+          value: "75"
   fileConfig: {}
   envConfig:
     WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
