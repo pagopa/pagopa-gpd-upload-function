@@ -6,17 +6,19 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
-import it.gov.pagopa.gpd.upload.model.pd.PaymentPositions;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
-import org.junit.Assert;
+import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
+
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
@@ -36,12 +38,12 @@ class ValidationFunctionTest {
     private Logger mockLogger;
 
     @BeforeAll
-    public static void init() {
+    static void init() {
         positionValidatorMockedStatic = mockStatic(GPDValidator.class);
     }
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         mockLogger = mock(Logger.class);
         StatusService mockStatusService = mock(StatusService.class);
         mockedStaticStatusService = mockStatic(StatusService.class);
@@ -52,7 +54,7 @@ class ValidationFunctionTest {
     }
 
     @AfterEach
-    public void tearDown() {
+    void tearDown() {
         mockedStaticStatusService.close();
         mockedStaticQueueService.close();
     }
@@ -94,9 +96,9 @@ class ValidationFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
-        doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
-        doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
-        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
+        lenient().doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
+        lenient().doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
@@ -115,8 +117,8 @@ class ValidationFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
-        doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
-        doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any());
+        lenient().doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any());
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function
@@ -180,9 +182,45 @@ class ValidationFunctionTest {
                 validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.DELETE, null, new ArrayList<>(), "key", "code", "broker-id")
         );
     }
+    
+    @Test
+    void runSkipDuplicateEventSubject() {
+        // Prepare all mock response
+        when(context.getLogger()).thenReturn(mockLogger);
+        when(context.getInvocationId()).thenReturn("testInvocationId");
+
+        String broker = "demo";
+        String fiscalCode = "demo";
+        String filename = "demo.json";
+        String eventSubject = String.format("/containers/%s/blobs/%s/input/%s", broker, fiscalCode, filename);
+
+        String events = "[{" +
+                "\"id\":\"1\"," +
+                "\"eventType\":\"Microsoft.Storage.BlobCreated\"," +
+                "\"subject\":\"" + eventSubject + "\"," +
+                "\"data\":{\"contentLength\":1024}," +
+                "\"eventTime\":\"2023-01-01T00:00:00Z\"," +
+                "\"dataVersion\":\"1.0\"" +
+                "}]";
+       
+        String lockSubject = String.format("/containers/%s/blobs/%s/%s", broker, fiscalCode, "demo");
+        assertTrue(IdempotencyUploadTracker.tryLock(lockSubject));
+
+        // Run
+        validationFunction.run(events, context);
+
+        verify(mockLogger).log(
+            eq(Level.WARNING),
+            argThat((Supplier<String> supplier) ->
+                supplier != null && supplier.get().contains("Upload already in progress"))
+        );
+
+        // Cleanup
+        IdempotencyUploadTracker.unlock(lockSubject);
+    }
 
     @AfterAll
-    public static void close() {
+    static void close() {
         positionValidatorMockedStatic.close();
     }
 }

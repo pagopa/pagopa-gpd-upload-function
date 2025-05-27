@@ -19,6 +19,7 @@ import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.CRUDService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
+import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
 import it.gov.pagopa.gpd.upload.util.MapUtils;
 
 import java.time.LocalDateTime;
@@ -39,7 +40,8 @@ public class ServiceFunction {
         String invocationId = ctx.getInvocationId();
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-
+        String subjectFormat = "/containers/%s/blobs/%s/%s";       
+        String subject = String.format(subjectFormat,"NA","NA","NA");
         try {
             QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
             // extract from message
@@ -51,6 +53,10 @@ public class ServiceFunction {
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
             if(status.upload.getCurrent() == status.upload.getTotal()) {
+            	subject = String.format(subjectFormat,
+            			msg.getBrokerCode(),msg.getOrganizationFiscalCode(),msg.getUploadKey());
+            	// Unlock idempotency key
+            	IdempotencyUploadTracker.unlock(subject);
                 LocalDateTime endTime = LocalDateTime.now();
                 status.upload.setEnd(endTime);
                 getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, endTime);
@@ -60,6 +66,9 @@ public class ServiceFunction {
         } catch (Exception e) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, message: %s, caused by: %s, localized-message: %s",
                     invocationId, e.getClass(), e.getMessage(), e.getCause(), e.getLocalizedMessage()));
+            // Unlock idempotency key
+            IdempotencyUploadTracker.unlock(subject);
+            
         }
     }
 
@@ -70,7 +79,7 @@ public class ServiceFunction {
         return BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json");
     }
 
-    private Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {
+    public Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {
         return switch (msg.getCrudOperation()) {
             case CREATE -> gpdClient::createDebtPosition;
             case UPDATE -> gpdClient::updateDebtPosition;
@@ -78,11 +87,11 @@ public class ServiceFunction {
         };
     }
 
-    private CRUDService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage debtPositionMessage) {
+    public CRUDService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage debtPositionMessage) {
         return new CRUDService(ctx, method, debtPositionMessage, getStatusService(ctx));
     }
 
-    private DebtPositionMessage getPositionMessage(QueueMessage queueMessage) {
+    public DebtPositionMessage getPositionMessage(QueueMessage queueMessage) {
         return switch (queueMessage.getCrudOperation()) {
             case CREATE, UPDATE -> new UpsertMessage(queueMessage);
             case DELETE -> new DeleteMessage(queueMessage);
