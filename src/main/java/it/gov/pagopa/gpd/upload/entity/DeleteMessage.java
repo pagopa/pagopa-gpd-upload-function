@@ -16,7 +16,7 @@ public class DeleteMessage extends DebtPositionMessage {
     private List<String> paymentPositionIUPDs;
 
     public DeleteMessage(QueueMessage m) {
-        super(m.getCrudOperation(), m.getUploadKey(), m.getOrganizationFiscalCode(), m.getBrokerCode(), m.getRetryCounter());
+        super(m.getCrudOperation(), m.getUploadKey(), m.getOrganizationFiscalCode(), m.getBrokerCode(), m.getRetryCounter(), m.getServiceType());
         this.paymentPositionIUPDs = m.getPaymentPositionIUPDs();
     }
 

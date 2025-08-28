@@ -18,7 +18,7 @@ public class UpsertMessage extends DebtPositionMessage {
     private List<PaymentPosition> paymentPositions;
 
     public UpsertMessage(QueueMessage m) {
-        super(m.getCrudOperation(), m.getUploadKey(), m.getOrganizationFiscalCode(), m.getBrokerCode(), m.getRetryCounter());
+        super(m.getCrudOperation(), m.getUploadKey(), m.getOrganizationFiscalCode(), m.getBrokerCode(), m.getRetryCounter(), m.getServiceType());
         this.paymentPositions = m.getPaymentPositions();
     }
 

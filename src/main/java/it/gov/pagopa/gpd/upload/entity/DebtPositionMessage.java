@@ -3,6 +3,7 @@ package it.gov.pagopa.gpd.upload.entity;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.service.MessageTranslator;
 import it.gov.pagopa.gpd.upload.service.RequestTranslator;
 import lombok.AllArgsConstructor;
@@ -21,6 +22,7 @@ public abstract class DebtPositionMessage {
     private String organizationFiscalCode;
     private String brokerCode;
     private Integer retryCounter;
+    private ServiceType serviceType;
 
     public abstract List<String> getIUPDList();
 
