@@ -9,6 +9,7 @@ import com.microsoft.azure.storage.queue.CloudQueue;
 import com.microsoft.azure.storage.queue.CloudQueueMessage;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 
 import java.net.URISyntaxException;
@@ -60,12 +61,13 @@ public class QueueService {
         return true;
     }
 
-    public QueueMessage.QueueMessageBuilder generateMessageBuilder(CRUDOperation operation, String uploadKey, String orgFiscalCode, String brokerCode) {
+    public QueueMessage.QueueMessageBuilder generateMessageBuilder(CRUDOperation operation, String uploadKey, String orgFiscalCode, String brokerCode, ServiceType serviceType) {
         return QueueMessage.builder()
                        .crudOperation(operation)
                        .uploadKey(uploadKey)
                        .organizationFiscalCode(orgFiscalCode)
                        .brokerCode(brokerCode)
+                       .serviceType(serviceType)
                        .retryCounter(0);
     }
 
