@@ -9,6 +9,7 @@ import com.microsoft.azure.storage.queue.CloudQueue;
 import it.gov.pagopa.gpd.upload.functions.util.TestUtil;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import org.junit.ClassRule;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ public class QueueServiceTest {
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
         queueService = new QueueService(logger, cloudQueue);
         when(context.getLogger()).thenReturn(logger);
-        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(CRUDOperation.UPDATE, "key", "orgFiscalCode", "brokerCode");
+        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(CRUDOperation.UPDATE, "key", "orgFiscalCode", "brokerCode", ServiceType.GPD);
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
         queueService.enqueueUpsertMessage(context, om, List.of(TestUtil.getMockDebtPosition()), builder, 0, null);
@@ -63,7 +64,7 @@ public class QueueServiceTest {
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
         queueService = new QueueService(logger, cloudQueue);
         when(context.getLogger()).thenReturn(logger);
-        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(CRUDOperation.DELETE, "key", "orgFiscalCode", "brokerCode");
+        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(CRUDOperation.DELETE, "key", "orgFiscalCode", "brokerCode", ServiceType.GPD);
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
         queueService.enqueueDeleteMessage(context, om, List.of(new String[]{"IUPD1"}), builder, 0);

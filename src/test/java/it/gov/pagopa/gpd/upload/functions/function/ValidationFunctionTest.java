@@ -6,6 +6,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.GPDValidator;
@@ -17,11 +18,14 @@ import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
+import static it.gov.pagopa.gpd.upload.util.Constants.BLOB_KEY;
+import static it.gov.pagopa.gpd.upload.util.Constants.SERVICE_TYPE_KEY;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -95,10 +99,10 @@ class ValidationFunctionTest {
         when(context.getInvocationId()).thenReturn("testInvocationId");
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
-        lenient().doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
-        lenient().doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
-        lenient().doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
+        Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
+        lenient().doReturn(response).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt(), any(ServiceType.class));
+        lenient().doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
@@ -116,9 +120,9 @@ class ValidationFunctionTest {
         when(context.getInvocationId()).thenReturn("testInvocationId");
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        BinaryData createInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData()));
-        lenient().doReturn(createInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
-        lenient().doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any());
+        Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
+        lenient().doReturn(response).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any(), any(ServiceType.class));
         // Set mock event
         String event = getMockBlobCreatedEvent();
         // Run function
@@ -135,10 +139,10 @@ class ValidationFunctionTest {
         when(context.getInvocationId()).thenReturn("testInvocationId");
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        BinaryData deleteInputData = BinaryData.fromString(objectMapper.writeValueAsString(getMockDeleteInputData()));
-        doReturn(deleteInputData).when(validationFunction).downloadBlob(any(), any(), any(), any());
-        doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt());
-        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any());
+        Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockDeleteInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
+        doReturn(response).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt(), any(ServiceType.class));
+        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
@@ -156,7 +160,7 @@ class ValidationFunctionTest {
         BinaryData malformedJSONData = BinaryData.fromString("{malformed JSON");
 
         // Run function and assert
-        assertFalse(validationFunction.validateBlob(context, "broker", "fc", "key", malformedJSONData));
+        assertFalse(validationFunction.validateBlob(context, "broker", "fc", "key", malformedJSONData, ServiceType.GPD));
     }
 
     @Test
@@ -167,7 +171,7 @@ class ValidationFunctionTest {
 
         // Run function method and assert
         Assertions.assertFalse(
-                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.CREATE, new ArrayList<>(), null, "key", "code", "broker-id")
+                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.CREATE, new ArrayList<>(), null, "key", "code", "broker-id", ServiceType.GPD)
         );
     }
 
@@ -179,7 +183,7 @@ class ValidationFunctionTest {
 
         // Run function method and assert
         Assertions.assertFalse(
-                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.DELETE, null, new ArrayList<>(), "key", "code", "broker-id")
+                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.DELETE, null, new ArrayList<>(), "key", "code", "broker-id", ServiceType.GPD)
         );
     }
     
