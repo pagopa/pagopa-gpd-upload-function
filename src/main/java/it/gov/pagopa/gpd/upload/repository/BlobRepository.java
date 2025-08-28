@@ -5,17 +5,21 @@ import com.azure.storage.blob.BlobClient;
 import com.azure.storage.blob.BlobContainerClient;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.blob.BlobServiceClientBuilder;
+import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.BlobStorageException;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static it.gov.pagopa.gpd.upload.util.Constants.BLOB_KEY;
+import static it.gov.pagopa.gpd.upload.util.Constants.SERVICE_TYPE_KEY;
+
 @Slf4j
 public class BlobRepository {
-
     private final String connectionString = System.getenv("GPD_SA_CONNECTION_STRING");
-
     private static final String REPORT_SUFFIX = "report";
     private static final String INPUT_DIRECTORY = "input";
     private static final String OUTPUT_DIRECTORY = "output";
@@ -38,7 +42,7 @@ public class BlobRepository {
         this.logger = logger;
     }
 
-    public BinaryData download(String broker, String fiscalCode, String filename) {
+    public Map<String, Object> download(String broker, String fiscalCode, String filename) {
         blobServiceClient = new BlobServiceClientBuilder()
                                     .connectionString(connectionString)
                                     .buildClient();
@@ -53,7 +57,10 @@ public class BlobRepository {
         if(!blobClient.exists())
             logger.log(Level.INFO, () -> "blob doesn't exist: " + blobName);
 
-        return blobClient.downloadContent();
+        BlobProperties properties = blobClient.getProperties();
+        ServiceType serviceType = ServiceType.valueOf(properties.getMetadata().getOrDefault(SERVICE_TYPE_KEY, ServiceType.GPD.name()));
+
+        return Map.of(BLOB_KEY, blobClient.downloadContent(), SERVICE_TYPE_KEY, serviceType);
     }
 
     public boolean uploadReport(String data, String broker, String fiscalCode, String filename) {
