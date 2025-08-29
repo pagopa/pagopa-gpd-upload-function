@@ -2,6 +2,7 @@ package it.gov.pagopa.gpd.upload.functions.service;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.exception.AppException;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import org.junit.jupiter.api.BeforeAll;
@@ -46,7 +47,7 @@ public class StatusServiceTest {
         doReturn(statusRepository).when(statusService).getStatusRepository();
         doReturn(getMockStatus()).when(statusRepository).createIfNotExist(any(), any(), any(), any());
         //Assertion
-        assertNotNull(statusService.createStatus(ctx.getInvocationId(), "broker", "fiscalCode", "key", 10));
+        assertNotNull(statusService.createStatus(ctx.getInvocationId(), "broker", "fiscalCode", "key", 10, ServiceType.GPD));
     }
 
     @Test

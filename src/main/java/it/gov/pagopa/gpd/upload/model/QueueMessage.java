@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload.model;
 
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import lombok.*;
 
@@ -18,4 +19,5 @@ public class QueueMessage {
     private Integer retryCounter;
     private List<PaymentPosition> paymentPositions;
     private List<String> paymentPositionIUPDs;
+    private ServiceType serviceType;
 }

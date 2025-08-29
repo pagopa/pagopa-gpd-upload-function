@@ -24,8 +24,8 @@ public class GPDClient {
     private static GPDClient instance;
     private static final String HEADER_REQUEST_ID = "X-Request-Id";
     private static final String HEADER_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
-    private static final String GPD_DEBT_POSITIONS_PATH_V1 = "/v1/organizations/%s/debtpositions";
-    private static final String GPD_DEBT_POSITIONS_PATH_V2 = "/v2/organizations/%s/debtpositions";
+    private static final String GPD_DEBT_POSITIONS_PATH_V1 = "/v1/organizations/%s/debtpositions?serviceType=%s";
+    private static final String GPD_DEBT_POSITIONS_PATH_V2 = "/v2/organizations/%s/debtpositions?serviceType=%s";
     private static final String URI_SEPARATOR = "/";
     private static final String GPD_HOST = System.getenv("GPD_HOST");
     private static final String GPD_SUBSCRIPTION_KEY = System.getenv("GPD_SUBSCRIPTION_KEY");
@@ -45,17 +45,17 @@ public class GPDClient {
     }
 
     public ResponseGPD createDebtPosition(RequestGPD req) {
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode());
+        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
         return CRUD_GPD(HttpMethod.POST, path, req);
     }
 
     public ResponseGPD updateDebtPosition(RequestGPD req) {
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode());
+        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
         return CRUD_GPD(HttpMethod.PUT, path, req);
     }
 
     public ResponseGPD deleteDebtPosition(RequestGPD req) {
-        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode());
+        String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
         return CRUD_GPD(HttpMethod.DELETE, path, req);
     }
 

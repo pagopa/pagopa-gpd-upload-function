@@ -12,10 +12,11 @@ import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.entity.Status;
-import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.exception.AppException;
-import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
+import it.gov.pagopa.gpd.upload.model.UploadInput;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.model.pd.PaymentPosition;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
 import it.gov.pagopa.gpd.upload.service.QueueService;
@@ -25,10 +26,14 @@ import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static it.gov.pagopa.gpd.upload.util.Constants.BLOB_KEY;
+import static it.gov.pagopa.gpd.upload.util.Constants.SERVICE_TYPE_KEY;
 
 /**
  * Following function load blob, validate it and create a request message to enqueue
@@ -45,7 +50,7 @@ public class ValidationFunction {
         Logger logger = context.getLogger();
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
-        
+
         String subjectFormat = "/containers/%s/blobs/%s/%s";
         String subject;
 
@@ -74,23 +79,25 @@ public class ValidationFunction {
                     String fiscalCode = matcher.group(2);   // creditor institution directory
                     String filename = matcher.group(3);     // e.g. 77777777777c8a1.json
                     String key = filename.substring(0, filename.indexOf("."));
-                    
+
                     // Attempt to acquire a lock for the current upload event to ensure idempotency.
                     // If another instance is already processing the same upload (same subject),
                     // skip processing to avoid duplicate handling of the same file.
                     subject = String.format(subjectFormat,
-                    		broker,fiscalCode,key);
+                            broker, fiscalCode, key);
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
-                    	logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));         	
-                    	return; // skip event
+                        logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));
+                        return; // skip event
                     }
 
-                    BinaryData content = this.downloadBlob(context, broker, fiscalCode, filename);
-                    
+                    Map<String, Object> responseDownload = this.downloadBlob(context, broker, fiscalCode, filename);
+                    BinaryData content = (BinaryData) responseDownload.get(BLOB_KEY);
+                    ServiceType serviceType = (ServiceType) responseDownload.get(SERVICE_TYPE_KEY);
+
                     logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "broker: %s, fiscalCode: %s, filename: %s",
                             context.getInvocationId(), key, broker, fiscalCode, filename));
                     try {
-                        if(!this.validateBlob(context, broker, fiscalCode, key, content))
+                        if (!this.validateBlob(context, broker, fiscalCode, key, content, serviceType))
                             throw new AppException("Invalid blob");
                     } catch (AppException e) {
                         logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
@@ -106,7 +113,7 @@ public class ValidationFunction {
         }
     }
 
-    public boolean validateBlob(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, BinaryData content) throws AppException {
+    public boolean validateBlob(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, BinaryData content, ServiceType serviceType) throws AppException {
         int size = 0;
         ObjectMapper om = new ObjectMapper();
         om.registerModule(new JavaTimeModule());
@@ -116,27 +123,27 @@ public class ValidationFunction {
             // deserialize UploadInput from JSON to Object
             UploadInput input = om.readValue(content.toString(), UploadInput.class);
 
-            if(!input.validOneOf()) {
+            if (!input.validOneOf()) {
                 return false;
             }
 
             List<PaymentPosition> pps = input.getPaymentPositions();
             List<String> iupds = input.getPaymentPositionIUPDs();
 
-            if(pps != null)
+            if (pps != null)
                 size = pps.size();
-            else if(iupds != null)
+            else if (iupds != null)
                 size = iupds.size();
 
-            Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, size);
-            if(pps != null) GPDValidator.validate(ctx, pps, fiscalCode, uploadKey);
+            Status status = this.createStatus(ctx, broker, fiscalCode, uploadKey, size, serviceType);
+            if (pps != null) GPDValidator.validate(ctx, pps, fiscalCode, uploadKey);
 
             if (status.getUpload().getEnd() != null) { // already exist and upload is completed, so no-retry
                 return false;
             }
 
             // enqueue chunk and other input to form message
-            return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker);
+            return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker, serviceType);
         } catch (JsonProcessingException e) {
             ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Processing function JsonMappingException: %s, caused by: %s",
                     ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause()));
@@ -145,18 +152,18 @@ public class ValidationFunction {
         }
     }
 
-    public BinaryData downloadBlob(ExecutionContext ctx, String broker, String fiscalCode, String filename) {
+    public Map<String, Object> downloadBlob(ExecutionContext ctx, String broker, String fiscalCode, String filename) {
         return BlobRepository.getInstance(ctx.getLogger()).download(broker, fiscalCode, filename);
     }
 
-    public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size) throws AppException {
+    public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size, ServiceType serviceType) throws AppException {
         return StatusService.getInstance(ctx.getLogger())
-                                .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size);
+                .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size, serviceType);
     }
 
-    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker) {
+    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker, ServiceType serviceType) {
         QueueService queueService = QueueService.getInstance(ctx.getLogger());
-        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker);
+        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker, serviceType);
         return switch (operation) {
             case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, null);
             case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
