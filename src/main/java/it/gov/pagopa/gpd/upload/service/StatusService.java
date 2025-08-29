@@ -9,7 +9,10 @@ import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.repository.StatusRepository;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,7 +32,8 @@ public class StatusService {
         return instance;
     }
 
-    public StatusService() {}
+    public StatusService() {
+    }
 
     public StatusService(Logger logger) {
         this.logger = logger;
@@ -38,16 +42,16 @@ public class StatusService {
 
     public Status createStatus(String invocationId, String broker, String fiscalCode, String key, int totalPosition, ServiceType serviceType) throws AppException {
         Status statusIfNotExist = Status.builder()
-                                          .id(key)
-                                          .brokerID(broker)
-                                          .fiscalCode(fiscalCode)
-                                          .upload(Upload.builder()
-                                                          .current(0)
-                                                          .total(totalPosition)
-                                                          .serviceType(serviceType)
-                                                          .responses(new ArrayList<>())
-                                                          .start(LocalDateTime.now()).build())
-                                          .build();
+                .id(key)
+                .brokerID(broker)
+                .fiscalCode(fiscalCode)
+                .serviceType(serviceType)
+                .upload(Upload.builder()
+                        .current(0)
+                        .total(totalPosition)
+                        .responses(new ArrayList<>())
+                        .start(LocalDateTime.now()).build())
+                .build();
         Status status = getStatusRepository().createIfNotExist(invocationId, key, fiscalCode, statusIfNotExist);
         if (status.upload.getEnd() != null) {
             logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Upload already processed. Upload finished at: %s", invocationId, status.upload.getEnd()));
@@ -70,7 +74,7 @@ public class StatusService {
     public synchronized void updateStatus(String invocationId, String fiscalCode, String key, List<ResponseEntry> entries) throws AppException {
         try {
             Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
-            for(ResponseEntry entry: entries) {
+            for (ResponseEntry entry : entries) {
                 logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Add response %s", invocationId, entry.getStatusMessage()));
 
                 status.upload.addResponse(entry);
@@ -85,10 +89,10 @@ public class StatusService {
     // method overloading: handle a list of IUPDs and related response -> all IUPDs must be associated to the same response
     public void appendResponse(String invocationId, String fiscalCode, String key, List<String> iupds, ResponseGPD response) throws AppException {
         ResponseEntry entry = ResponseEntry.builder()
-                                           .statusCode(response.getStatus())
-                                           .statusMessage(Optional.ofNullable(response.getDetail()).orElse(""))
-                                           .requestIDs(iupds)
-                                           .build();
+                .statusCode(response.getStatus())
+                .statusMessage(Optional.ofNullable(response.getDetail()).orElse(""))
+                .requestIDs(iupds)
+                .build();
         this.updateStatus(invocationId, fiscalCode, key, List.of(entry));
     }
 
@@ -98,10 +102,10 @@ public class StatusService {
         for (String iupd : responses.keySet()) {
             ResponseGPD response = responses.get(iupd);
             ResponseEntry responseEntry = ResponseEntry.builder()
-                                                  .statusCode(response.getStatus())
-                                                  .statusMessage(Optional.ofNullable(response.getDetail()).orElse(""))
-                                                  .requestIDs(List.of(iupd))
-                                                  .build();
+                    .statusCode(response.getStatus())
+                    .statusMessage(Optional.ofNullable(response.getDetail()).orElse(""))
+                    .requestIDs(List.of(iupd))
+                    .build();
             entries.add(responseEntry);
         }
 
