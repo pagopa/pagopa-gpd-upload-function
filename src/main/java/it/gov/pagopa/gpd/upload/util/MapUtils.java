@@ -14,7 +14,6 @@ public class MapUtils {
                 .startTime(status.getUpload().getStart())
                 .endTime(status.getUpload().getEnd())
                 .responses(status.getUpload().getResponses())
-                .serviceType(status.getServiceType())
                 .build();
     }
 

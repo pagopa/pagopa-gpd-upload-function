@@ -75,7 +75,7 @@ public class ServiceFunction {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(new JavaTimeModule());
-        return BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json");
+        return BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json", status.getServiceType());
     }
 
     public Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {
