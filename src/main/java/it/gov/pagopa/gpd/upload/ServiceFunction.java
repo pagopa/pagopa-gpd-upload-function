@@ -13,7 +13,6 @@ import it.gov.pagopa.gpd.upload.entity.DebtPositionMessage;
 import it.gov.pagopa.gpd.upload.entity.UpsertMessage;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.entity.Status;
-import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.RequestGPD;
 import it.gov.pagopa.gpd.upload.model.ResponseGPD;
 import it.gov.pagopa.gpd.upload.repository.BlobRepository;
@@ -72,7 +71,7 @@ public class ServiceFunction {
         }
     }
 
-    public boolean generateReport(Logger logger, String uploadKey, Status status) throws AppException, JsonProcessingException {
+    public boolean generateReport(Logger logger, String uploadKey, Status status) throws JsonProcessingException {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(new JavaTimeModule());

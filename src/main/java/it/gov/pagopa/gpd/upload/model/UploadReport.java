@@ -2,6 +2,7 @@ package it.gov.pagopa.gpd.upload.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import it.gov.pagopa.gpd.upload.entity.ResponseEntry;
+import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -22,4 +23,5 @@ public class UploadReport {
     public LocalDateTime startTime;
     @JsonFormat(pattern="yyyy-MM-dd'T'HH:mm:ss.SSS")
     public LocalDateTime endTime;
+    private ServiceType serviceType;
 }
