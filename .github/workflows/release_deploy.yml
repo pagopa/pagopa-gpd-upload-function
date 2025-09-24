@@ -79,6 +79,7 @@ jobs:
     name: Create a New Release
     runs-on: ubuntu-latest
     needs: [setup]
+    if: ${{ inputs.semver != 'skip' }}
     outputs:
       version: ${{ steps.release.outputs.version }}
     steps:
