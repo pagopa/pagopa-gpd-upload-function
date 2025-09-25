@@ -68,7 +68,7 @@ public class BlobRepository {
         String blobPath = "/" + fiscalCode + "/" + OUTPUT_DIRECTORY + "/" + REPORT_SUFFIX + filename;
         boolean uploadResponse = this.upload(data, broker, blobPath);
         if(uploadResponse){
-            setServiceTypeMetadata(serviceType, filename, broker);
+            setServiceTypeMetadata(serviceType, broker, blobPath);
         }
         return uploadResponse;
     }
@@ -92,10 +92,10 @@ public class BlobRepository {
         }
     }
 
-    private void setServiceTypeMetadata(ServiceType serviceType, String fileName, String container){
+    private void setServiceTypeMetadata(ServiceType serviceType, String container, String blobPath){
         Map<String, String> metadata = Map.of(SERVICE_TYPE_METADATA, serviceType.name());
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(container);
-        blobContainerClient.getBlobClient(fileName).setMetadata(metadata);
+        blobContainerClient.getBlobClient(blobPath).setMetadata(metadata);
     }
 }
 
