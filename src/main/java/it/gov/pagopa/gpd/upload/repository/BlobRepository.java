@@ -23,6 +23,7 @@ public class BlobRepository {
     private static final String REPORT_SUFFIX = "report";
     private static final String INPUT_DIRECTORY = "input";
     private static final String OUTPUT_DIRECTORY = "output";
+    private static final String SERVICE_TYPE_METADATA = "serviceType";
     private BlobServiceClient blobServiceClient;
     private Logger logger;
 
@@ -63,12 +64,16 @@ public class BlobRepository {
         return Map.of(BLOB_KEY, blobClient.downloadContent(), SERVICE_TYPE_KEY, serviceType);
     }
 
-    public boolean uploadReport(String data, String broker, String fiscalCode, String filename) {
+    public boolean uploadReport(String data, String broker, String fiscalCode, String filename, ServiceType serviceType) {
         String blobPath = "/" + fiscalCode + "/" + OUTPUT_DIRECTORY + "/" + REPORT_SUFFIX + filename;
-        return this.upload(data, broker, blobPath);
+        boolean uploadResponse = this.upload(data, broker, blobPath);
+        if(uploadResponse){
+            setServiceTypeMetadata(serviceType, broker, blobPath);
+        }
+        return uploadResponse;
     }
 
-    public boolean upload(String data, String container, String blobPath) {
+    private boolean upload(String data, String container, String blobPath) {
         try {
             blobServiceClient = new BlobServiceClientBuilder()
                                         .connectionString(connectionString)
@@ -85,6 +90,12 @@ public class BlobRepository {
             logger.log(Level.SEVERE, () -> "BlobStorageException " + e.getMessage());
             return false;
         }
+    }
+
+    private void setServiceTypeMetadata(ServiceType serviceType, String container, String blobPath){
+        Map<String, String> metadata = Map.of(SERVICE_TYPE_METADATA, serviceType.name());
+        BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(container);
+        blobContainerClient.getBlobClient(blobPath).setMetadata(metadata);
     }
 }
 
