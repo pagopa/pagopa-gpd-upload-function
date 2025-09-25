@@ -62,7 +62,11 @@ public class GPDClient {
     private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
         try {
             Response response = callGPD(method.name(), path, req.getBody());
-            return mapResponse(response);
+            try {
+                return mapResponse(response);
+            } finally {
+                if (response != null) response.close();
+            }
         } catch (JsonProcessingException e) {
             return ResponseGPD.builder()
                            .retryStep(RetryStep.RETRY)
@@ -88,11 +92,15 @@ public class GPDClient {
         }
     }
 
+    
     private ResponseGPD mapResponse(Response response) throws JsonProcessingException {
         ResponseGPD responseGPD;
         int status = response.getStatus();
+        // read the body
+        String rawBody = safeReadBody(response);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+    	
         if (status >= 200 && status < 300) {
             responseGPD = ResponseGPD.builder()
                                   .retryStep(RetryStep.DONE)
@@ -101,8 +109,21 @@ public class GPDClient {
         }
         else if (status >= 400 && status < 500) {
             // skip retry if the status is 4xx
+        	/*
             responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
-            responseGPD.setRetryStep(RetryStep.ERROR);
+            responseGPD.setRetryStep(RetryStep.ERROR);*/
+        	ResponseGPD mapped;
+        	try {
+        	    mapped = objectMapper.readValue(rawBody, ResponseGPD.class);
+        	} catch (Exception ignore) {
+        	    mapped = null;
+        	}
+        	if (mapped != null) {
+        	    responseGPD = mapped;
+        	} else {
+        	    responseGPD = ResponseGPD.builder().status(status).build();
+        	}
+        	responseGPD.setRetryStep(RetryStep.ERROR);
         }
         else {
             responseGPD = ResponseGPD.builder()
@@ -110,8 +131,61 @@ public class GPDClient {
                                   .retryStep(RetryStep.RETRY)
                                   .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
         }
-        responseGPD.setDetail(MapUtils.getDetail(HttpStatus.valueOf(status)));
+        
+        // If the body does not have the status, it is forced with the HTTP response status.
+        if (responseGPD.getStatus() == 0) {
+            responseGPD.setStatus(status);
+        }
+        
+        //responseGPD.setDetail(MapUtils.getDetail(HttpStatus.valueOf(status)));
+        String gpdMsg = extractGpdMessage(rawBody);
+        String fallback = MapUtils.getDetail(HttpStatus.valueOf(status));
+        String finalMessage = (gpdMsg != null) ? gpdMsg : fallback;
+        responseGPD.setDetail(formatStatusAndMessage(status, finalMessage));
 
         return responseGPD;
     }
+    
+    private String safeReadBody(Response response) {
+        try {
+            return response.hasEntity() ? response.readEntity(String.class) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    // Combine "status - message" (if message present).
+    private String formatStatusAndMessage(int status, String message) {
+        String msg = (message == null) ? "" : message.trim();
+        return msg.isEmpty() ? String.valueOf(status) : (status + " - " + msg);
+    }
+
+    private String extractGpdMessage(String rawBody) {
+    	// 1) Try reading detail from problem+json
+    	// 2) Fallback: Use the raw body as a string
+    	// 3) Otherwise, null
+        if (!isNotBlank(rawBody)) {
+            return null;
+        }
+        try {
+            ObjectMapper om = new ObjectMapper().registerModule(new JavaTimeModule());
+            var node = om.readTree(rawBody);
+            if (node != null && node.hasNonNull("detail")) {
+                String detail = node.get("detail").asText();
+                if (isNotBlank(detail)) {
+                    return detail.trim();
+                }
+            }
+        } catch (Exception ignore) {
+            // If it's not JSON or parsing fails, fallback to raw.
+        }
+        // fallback: truncated text body
+        String s = rawBody.trim();
+        return s.length() > 500 ? (s.substring(0, 500) + "...") : s;
+    }
+    
+    private boolean isNotBlank(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
 }
