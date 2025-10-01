@@ -1,6 +1,5 @@
 package it.gov.pagopa.gpd.upload.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.HttpMethod;
@@ -58,22 +57,31 @@ public class GPDClient {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
         return CRUD_GPD(HttpMethod.DELETE, path, req);
     }
-
+    
     private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
+        Response response = null;
         try {
-            Response response = callGPD(method.name(), path, req.getBody());
-            try {
-                return mapResponse(response);
-            } finally {
-                if (response != null) response.close();
-            }
-        } catch (JsonProcessingException e) {
+            response = callGPD(method.name(), path, req.getBody());
+            return mapResponse(response);
+        } catch (RuntimeException e) {
+            // Log and prudential fallback: RETRY with 500 + standard message
+            logger.log(Level.WARNING, String.format("[GPDClient][%s] Unexpected runtime error: %s",
+                    method.name(), e.getMessage()), e);
+
             return ResponseGPD.builder()
-                           .retryStep(RetryStep.RETRY)
-                           .detail(HttpStatus.INTERNAL_SERVER_ERROR.name())
-                           .build();
+                    .retryStep(RetryStep.RETRY)
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                    .detail(formatStatusAndMessage(
+                            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                            MapUtils.getDetail(HttpStatus.INTERNAL_SERVER_ERROR)))
+                    .build();
+        } finally {
+            if (response != null) {
+                try { response.close(); } catch (Exception ignore) { /* no-op */ }
+            }
         }
     }
+
 
     private Response callGPD(String httpMethod, String url, String body) {
         Client client = ClientBuilder.newClient();
@@ -93,7 +101,7 @@ public class GPDClient {
     }
 
     
-    private ResponseGPD mapResponse(Response response) throws JsonProcessingException {
+    private ResponseGPD mapResponse(Response response) {
         ResponseGPD responseGPD;
         int status = response.getStatus();
         // read the one-shot body
