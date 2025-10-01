@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-upload-function
-    tag: "0.3.0-2-PAGOPA-3305-report-segregation-by-servicetype"
+    tag: "0.5.0-PAGOPA-3309-detailed-status-message"
     pullPolicy: Always
   # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:

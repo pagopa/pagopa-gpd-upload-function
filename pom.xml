@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa.gpd.upload</groupId>
     <artifactId>gpd-upload-function</artifactId>
-    <version>0.3.0-2-PAGOPA-3305-report-segregation-by-servicetype</version>
+    <version>0.5.0-PAGOPA-3309-detailed-status-message</version>
     <packaging>jar</packaging>
     <name>GPD-Upload-Function</name>
 

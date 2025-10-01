@@ -1,6 +1,5 @@
 package it.gov.pagopa.gpd.upload.client;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.HttpMethod;
@@ -58,18 +57,31 @@ public class GPDClient {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
         return CRUD_GPD(HttpMethod.DELETE, path, req);
     }
-
+    
     private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
+        Response response = null;
         try {
-            Response response = callGPD(method.name(), path, req.getBody());
+            response = callGPD(method.name(), path, req.getBody());
             return mapResponse(response);
-        } catch (JsonProcessingException e) {
+        } catch (RuntimeException e) {
+            // Log and prudential fallback: RETRY with 500 + standard message
+            logger.log(Level.WARNING, String.format("[GPDClient][%s] Unexpected runtime error: %s",
+                    method.name(), e.getMessage()), e);
+
             return ResponseGPD.builder()
-                           .retryStep(RetryStep.RETRY)
-                           .detail(HttpStatus.INTERNAL_SERVER_ERROR.name())
-                           .build();
+                    .retryStep(RetryStep.RETRY)
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                    .detail(formatStatusAndMessage(
+                            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                            MapUtils.getDetail(HttpStatus.INTERNAL_SERVER_ERROR)))
+                    .build();
+        } finally {
+            if (response != null) {
+                try { response.close(); } catch (Exception ignore) { /* no-op */ }
+            }
         }
     }
+
 
     private Response callGPD(String httpMethod, String url, String body) {
         Client client = ClientBuilder.newClient();
@@ -88,30 +100,107 @@ public class GPDClient {
         }
     }
 
-    private ResponseGPD mapResponse(Response response) throws JsonProcessingException {
+    
+    private ResponseGPD mapResponse(Response response) {
         ResponseGPD responseGPD;
         int status = response.getStatus();
+        // read the one-shot body
+        String rawBody = safeReadBody(response);
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+
         if (status >= 200 && status < 300) {
             responseGPD = ResponseGPD.builder()
-                                  .retryStep(RetryStep.DONE)
-                                  .status(status)
-                                  .build();
-        }
-        else if (status >= 400 && status < 500) {
-            // skip retry if the status is 4xx
-            responseGPD = objectMapper.readValue(response.readEntity(String.class), ResponseGPD.class);
-            responseGPD.setRetryStep(RetryStep.ERROR);
-        }
-        else {
+                    .retryStep(RetryStep.DONE)
+                    .status(status)
+                    .build();
+        } else if (status >= 400 && status < 500) {
+        	// skip retry if the status is 4xx
+            responseGPD = mapClientError(objectMapper, rawBody, status);
+        } else {
             responseGPD = ResponseGPD.builder()
-                                  .status(status)
-                                  .retryStep(RetryStep.RETRY)
-                                  .detail(HttpStatus.INTERNAL_SERVER_ERROR.name()).build();
+                    .status(status)
+                    .retryStep(RetryStep.RETRY)
+                    .detail(HttpStatus.INTERNAL_SERVER_ERROR.name())
+                    .build();
         }
-        responseGPD.setDetail(MapUtils.getDetail(HttpStatus.valueOf(status)));
+
+        HttpStatus httpStatus = HttpStatus.valueOf(status);
+        String finalMessage;
+        if (httpStatus == HttpStatus.OK || httpStatus == HttpStatus.CREATED) {
+            // for 200/201 ALWAYS use the standard message
+            finalMessage = MapUtils.getDetail(httpStatus);
+        } else {
+            // for other statuses, if it exists, use GPD message, otherwise standard message
+            String gpdMsg = extractGpdMessage(rawBody);
+            finalMessage = (gpdMsg != null) ? gpdMsg : MapUtils.getDetail(httpStatus);
+        }
+        responseGPD.setDetail(formatStatusAndMessage(status, finalMessage));
 
         return responseGPD;
     }
+    
+    private ResponseGPD mapClientError(ObjectMapper objectMapper, String rawBody, int status) {
+        ResponseGPD mapped;
+        try {
+            mapped = objectMapper.readValue(rawBody, ResponseGPD.class);
+        } catch (Exception ignore) {
+            mapped = null;
+        }
+        ResponseGPD responseGPD;
+        if (mapped != null) {
+            responseGPD = mapped;
+            if (responseGPD.getStatus() == 0) {
+                responseGPD.setStatus(status);
+            }
+        } else {
+            responseGPD = ResponseGPD.builder().status(status).build();
+        }
+        responseGPD.setRetryStep(RetryStep.ERROR);
+        return responseGPD;
+    }
+
+    
+    private String safeReadBody(Response response) {
+        try {
+            return response.hasEntity() ? response.readEntity(String.class) : "";
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    // Combine "status - message" (if message present).
+    private String formatStatusAndMessage(int status, String message) {
+        String msg = (message == null) ? "" : message.trim();
+        return msg.isEmpty() ? String.valueOf(status) : (status + " - " + msg);
+    }
+
+    private String extractGpdMessage(String rawBody) {
+    	// 1) Try reading detail from problem+json
+    	// 2) Fallback: Use the raw body as a string
+    	// 3) Otherwise, null
+        if (!isNotBlank(rawBody)) {
+            return null;
+        }
+        try {
+            ObjectMapper om = new ObjectMapper().registerModule(new JavaTimeModule());
+            var node = om.readTree(rawBody);
+            if (node != null && node.hasNonNull("detail")) {
+                String detail = node.get("detail").asText();
+                if (isNotBlank(detail)) {
+                    return detail.trim();
+                }
+            }
+        } catch (Exception ignore) {
+            // If it's not JSON or parsing fails, fallback to raw.
+        }
+        // fallback: truncated text body
+        String s = rawBody.trim();
+        return s.length() > 500 ? (s.substring(0, 500) + "...") : s;
+    }
+    
+    private boolean isNotBlank(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
 }
