@@ -104,6 +104,7 @@ public class TestUtil {
                 .remittanceInformation("remittanceInformation")
                 .category("categoryXZ")
                 .iban("IT0000000000000000000000000")
+                .companyName("Test Mock Company")
                 .build();
     }
 

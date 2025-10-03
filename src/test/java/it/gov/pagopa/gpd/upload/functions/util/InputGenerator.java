@@ -31,6 +31,7 @@ public class InputGenerator {
                                        .remittanceInformation(UUID.randomUUID().toString().substring(0, 10))
                                        .category("category_" + testType)
                                        .iban("IT0000000000000000000000000")
+                                       .companyName("Test Transfer Company")
                                        .transferMetadata(new ArrayList<>())
                                        .build();
             List<Transfer> transferList = new ArrayList<>();
