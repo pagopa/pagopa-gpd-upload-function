@@ -45,7 +45,9 @@ public class Transfer implements Serializable {
     private String postalIban;
 
     private Stamp stamp;
-    
+
+    private String companyName;
+
     @Valid
     @Size(min=0, max=10)
     private List<TransferMetadata> transferMetadata = new ArrayList<>();
