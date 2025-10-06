@@ -81,7 +81,7 @@ microservice-chart:
     WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
     FUNCTIONS_WORKER_RUNTIME: "java"
     ASPNETCORE_URLS: "http://*:8080"
-    GPD_HOST: "https://api.dev.platform.pagopa.it/gpd/api"
+    GPD_HOST: "https://weudev.gps.internal.dev.platform.pagopa.it/pagopa-gpd-core-internal"
     RETRY_MAX_ATTEMPTS: "1"
     RETRY_MAX_DELAY: "10000"
     BLOCK_SIZE: "10"
