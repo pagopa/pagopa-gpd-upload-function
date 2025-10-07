@@ -4,7 +4,7 @@ microservice-chart:
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-upload-function
-    tag: "0.5.2"
+    tag: "0.5.2-1-PAGOPA-3321-internal-pod"
     pullPolicy: Always
   # https://github.com/Azure/azure-functions-host/blob/dev/src/WebJobs.Script.WebHost/Controllers/HostController.cs
   livenessProbe:
@@ -81,7 +81,7 @@ microservice-chart:
     WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
     FUNCTIONS_WORKER_RUNTIME: "java"
     ASPNETCORE_URLS: "http://*:8080"
-    GPD_HOST: "https://api.dev.platform.pagopa.it/gpd/api"
+    GPD_HOST: "https://weudev.gps.internal.dev.platform.pagopa.it/pagopa-gpd-core-internal"
     RETRY_MAX_ATTEMPTS: "1"
     RETRY_MAX_DELAY: "10000"
     BLOCK_SIZE: "10"
