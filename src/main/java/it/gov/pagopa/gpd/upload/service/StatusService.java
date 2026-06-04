@@ -16,10 +16,15 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.microsoft.azure.functions.HttpStatus;
+
 public class StatusService {
     private static volatile StatusService instance;
     private static StatusRepository statusRepository;
     public Logger logger;
+    
+    private static final String UNKNOWN_BROKER_ID = "UNKNOWN_BROKER";
+    private static final String FALLBACK_STATUS_MESSAGE_PREFIX = "[STATUS_NOT_FOUND_FALLBACK] ";
 
     public static StatusService getInstance(Logger logger) {
         if (instance == null) {
@@ -70,6 +75,53 @@ public class StatusService {
     public boolean updateStatusEndTime(String fiscalCode, String key, LocalDateTime endTime) {
         return getStatusRepository().partialUpdate(key, fiscalCode, endTime);
     }
+    
+    public synchronized boolean failStatus(String invocationId, String fiscalCode, String key, String failureMessage) {
+        try {
+            // get previous status to update.
+            Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
+
+            if (status == null) {
+                logger.log(Level.SEVERE, () -> String.format(
+                        "[id=%s][StatusService] Upload status not found for key=%s and fiscalCode=%s. " +
+                                "A fallback failed status will be created.",
+                        invocationId, key, fiscalCode));
+
+                status = buildFallbackFailedStatus(fiscalCode, key);
+                failureMessage = FALLBACK_STATUS_MESSAGE_PREFIX + failureMessage;
+            }
+
+            if (status.upload == null) {
+                status.upload = Upload.builder()
+                        .current(0)
+                        .total(0)
+                        .responses(new ArrayList<>())
+                        .start(LocalDateTime.now())
+                        .build();
+            }
+
+            if (status.upload.getResponses() == null) {
+                status.upload.setResponses(new ArrayList<>());
+            }
+
+            status.upload.getResponses().add(ResponseEntry.builder()
+            		.statusCode(HttpStatus.PAYLOAD_TOO_LARGE.value()) // HTTP 413 "Content Too Large"
+                    .statusMessage(failureMessage)
+                    .requestIDs(List.of())
+                    .build());
+
+            status.upload.setEnd(LocalDateTime.now());
+
+            getStatusRepository().upsertStatus(invocationId, status.id, status);
+            return true;
+
+        } catch (AppException e) {
+            logger.log(Level.SEVERE, () -> String.format(
+                    "[id=%s][StatusService] Error while marking upload %s as failed: %s",
+                    invocationId, key, e.getMessage()));
+            return false;
+        }
+    }
 
     public synchronized void updateStatus(String invocationId, String fiscalCode, String key, List<ResponseEntry> entries) throws AppException {
         try {
@@ -114,5 +166,20 @@ public class StatusService {
 
     public StatusRepository getStatusRepository() {
         return StatusRepository.getInstance(logger);
+    }
+    
+    private Status buildFallbackFailedStatus(String fiscalCode, String key) {
+        return Status.builder()
+                .id(key)
+                .brokerID(UNKNOWN_BROKER_ID)
+                .fiscalCode(fiscalCode)
+                .serviceType(ServiceType.GPD)
+                .upload(Upload.builder()
+                        .current(0)
+                        .total(0)
+                        .responses(new ArrayList<>())
+                        .start(LocalDateTime.now())
+                        .build())
+                .build();
     }
 }
