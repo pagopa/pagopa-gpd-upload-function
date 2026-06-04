@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
+import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.service.QueueService;
@@ -40,6 +41,8 @@ class ValidationFunctionTest {
     private MockedStatic<StatusService> mockedStaticStatusService;
     private MockedStatic<QueueService> mockedStaticQueueService;
     private Logger mockLogger;
+    private static final String DEFAULT_LOCK_SUBJECT =
+            "/containers/broker0001/blobs/ec0001/77777777777f3d1";
 
     @BeforeAll
     static void init() {
@@ -48,6 +51,8 @@ class ValidationFunctionTest {
 
     @BeforeEach
     void setUp() {
+        IdempotencyUploadTracker.unlock(DEFAULT_LOCK_SUBJECT);
+
         mockLogger = mock(Logger.class);
         StatusService mockStatusService = mock(StatusService.class);
         mockedStaticStatusService = mockStatic(StatusService.class);
@@ -59,36 +64,54 @@ class ValidationFunctionTest {
 
     @AfterEach
     void tearDown() {
+        IdempotencyUploadTracker.unlock(DEFAULT_LOCK_SUBJECT);
+
         mockedStaticStatusService.close();
         mockedStaticQueueService.close();
     }
 
     @Test
-    void runSizeTooLarge() throws Exception {
-        // Prepare all mock response
-        Logger logger = Logger.getLogger("gpd-upload-test-logger");
-        when(context.getLogger()).thenReturn(logger);
+    void runSizeTooLarge() throws AppException {
+    	when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
-        // Set mock event
+
         String event = getMockBlobCreatedEventSize("10e+8");
-        // Run function
+
+        doReturn(true).when(validationFunction)
+                .failUpload(eq(context), anyString(), anyString(), contains("exceeds the maximum allowed threshold"));
+
         validationFunction.run(event, context);
-        //Assertion
-        assertTrue(true);
+
+        verify(validationFunction, times(1))
+                .failUpload(eq(context), anyString(), anyString(), contains("exceeds the maximum allowed threshold"));
+
+        verify(validationFunction, never())
+                .downloadBlob(any(), any(), any(), any());
+
+        verify(validationFunction, never())
+                .validateBlob(any(), any(), any(), any(), any(), any());
     }
 
     @Test
-    void runSizeZero() throws Exception {
-        // Prepare all mock response
-        Logger logger = Logger.getLogger("gpd-upload-test-logger");
-        when(context.getLogger()).thenReturn(logger);
+    void runSizeZero() throws AppException  {
+    	when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
-        // Set mock event
+
         String event = getMockBlobCreatedEventSize("0");
-        // Run function
+
+        doReturn(true).when(validationFunction)
+                .failUpload(eq(context), anyString(), anyString(), contains("content length is zero"));
+
         validationFunction.run(event, context);
-        //Assertion
-        assertTrue(true);
+
+        verify(validationFunction, times(1))
+                .failUpload(eq(context), anyString(), anyString(), contains("content length is zero"));
+
+        verify(validationFunction, never())
+                .downloadBlob(any(), any(), any(), any());
+
+        verify(validationFunction, never())
+                .validateBlob(any(), any(), any(), any(), any(), any());
     }
 
     @Test

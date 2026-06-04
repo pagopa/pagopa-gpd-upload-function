@@ -16,6 +16,8 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.microsoft.azure.functions.HttpStatus;
+
 public class StatusService {
     private static volatile StatusService instance;
     private static StatusRepository statusRepository;
@@ -69,6 +71,41 @@ public class StatusService {
     // end-time partial update operation
     public boolean updateStatusEndTime(String fiscalCode, String key, LocalDateTime endTime) {
         return getStatusRepository().partialUpdate(key, fiscalCode, endTime);
+    }
+    
+    public synchronized boolean failStatus(String invocationId, String fiscalCode, String key, String failureMessage) {
+        try {
+        	// get previous status to update
+            Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
+
+            if (status == null) {
+                logger.log(Level.SEVERE, () -> String.format(
+                        "[id=%s][StatusService] Unable to mark upload %s as failed: status not found",
+                        invocationId, key));
+                return false;
+            }
+
+            if (status.upload.getResponses() == null) {
+                status.upload.setResponses(new ArrayList<>());
+            }
+
+            status.upload.getResponses().add(ResponseEntry.builder()
+                    .statusCode(HttpStatus.PAYLOAD_TOO_LARGE.value()) // HTTP 413 "Content Too Large"
+                    .statusMessage(failureMessage)
+                    .requestIDs(List.of())
+                    .build());
+
+            status.upload.setEnd(LocalDateTime.now());
+
+            getStatusRepository().upsertStatus(invocationId, status.id, status);
+            return true;
+
+        } catch (AppException e) {
+            logger.log(Level.SEVERE, () -> String.format(
+                    "[id=%s][StatusService] Error while marking upload %s as failed: %s",
+                    invocationId, key, e.getMessage()));
+            return false;
+        }
     }
 
     public synchronized void updateStatus(String invocationId, String fiscalCode, String key, List<ResponseEntry> entries) throws AppException {

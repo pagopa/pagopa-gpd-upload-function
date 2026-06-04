@@ -41,6 +41,8 @@ import static it.gov.pagopa.gpd.upload.util.Constants.SERVICE_TYPE_KEY;
  */
 public class ValidationFunction {
     private static final String LOG_PREFIX = "[id=%s][upload=%s][ValidationFunction]:";
+    
+    private static final long MAX_BLOB_CONTENT_LENGTH_BYTES = 100_000_000L;
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
@@ -59,14 +61,6 @@ public class ValidationFunction {
                 logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Call event type %s handler.", context.getInvocationId(), "-", event.getEventType()));
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
-                if (blobData.getContentLength() > 1e+8) { // if file greater than 100 MB
-                    logger.log(Level.INFO, () -> "File size too large");
-                    return; // skip event
-                }
-                if (blobData.getContentLength() == 0) {
-                    logger.log(Level.INFO, () -> "File size equal to zero");
-                    return; // skip event
-                }
 
                 logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Blob event subject: %s", context.getInvocationId(), "-", event.getSubject()));
 
@@ -88,6 +82,36 @@ public class ValidationFunction {
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
                         logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));
                         return; // skip event
+                    }
+                    
+                    if (blobData.getContentLength() == 0) {
+                        logger.log(Level.SEVERE, () -> String.format(
+                                LOG_PREFIX + "Blob content length is zero. Upload will be marked as failed and skipped.",
+                                context.getInvocationId(), key));
+
+                        this.failUpload(context, fiscalCode, key,
+                                "Input blob content length is zero");
+
+                        IdempotencyUploadTracker.unlock(subject);
+                        continue;
+                    }
+
+                    // Mark the upload as failed to avoid leaving it stuck with processedItem = 0.
+                    if (blobData.getContentLength() > MAX_BLOB_CONTENT_LENGTH_BYTES) {
+                        String failureMessage = String.format(
+                                "Input blob size %s bytes exceeds the maximum allowed threshold of %s bytes",
+                                blobData.getContentLength(),
+                                MAX_BLOB_CONTENT_LENGTH_BYTES
+                        );
+
+                        logger.log(Level.SEVERE, () -> String.format(
+                                LOG_PREFIX + "%s. Upload will be marked as failed and skipped.",
+                                context.getInvocationId(), key, failureMessage));
+
+                        this.failUpload(context, fiscalCode, key, failureMessage);
+
+                        IdempotencyUploadTracker.unlock(subject);
+                        continue;
                     }
 
                     Map<String, Object> responseDownload = this.downloadBlob(context, broker, fiscalCode, filename);
@@ -168,5 +192,10 @@ public class ValidationFunction {
             case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, null);
             case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
         };
+    }
+    
+    public boolean failUpload(ExecutionContext ctx, String fiscalCode, String uploadKey, String failureMessage) {
+        return StatusService.getInstance(ctx.getLogger())
+                .failStatus(ctx.getInvocationId(), fiscalCode, uploadKey, failureMessage);
     }
 }
