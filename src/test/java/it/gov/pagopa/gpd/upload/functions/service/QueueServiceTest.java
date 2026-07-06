@@ -47,7 +47,7 @@ public class QueueServiceTest {
                                                     .getQueueReference("VALID_POSITIONS_QUEUE");
 
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
-        queueService = new QueueService(logger, cloudQueue);
+        queueService = new QueueService(cloudQueue);
         when(context.getLogger()).thenReturn(logger);
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(CRUDOperation.UPDATE, "key", "orgFiscalCode", "brokerCode", ServiceType.GPD);
         ObjectMapper om = new ObjectMapper();
@@ -62,7 +62,7 @@ public class QueueServiceTest {
                                         .getQueueReference("VALID_POSITIONS_QUEUE");
 
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
-        queueService = new QueueService(logger, cloudQueue);
+        queueService = new QueueService(cloudQueue);
         when(context.getLogger()).thenReturn(logger);
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(CRUDOperation.DELETE, "key", "orgFiscalCode", "brokerCode", ServiceType.GPD);
         ObjectMapper om = new ObjectMapper();

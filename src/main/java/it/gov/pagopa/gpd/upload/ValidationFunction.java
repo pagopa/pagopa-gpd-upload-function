@@ -178,7 +178,7 @@ public class ValidationFunction {
     }
 
     public Map<String, Object> downloadBlob(ExecutionContext ctx, String broker, String fiscalCode, String filename) {
-        return BlobRepository.getInstance(ctx.getLogger()).download(broker, fiscalCode, filename);
+    	return new BlobRepository().download(broker, fiscalCode, filename);
     }
 
     public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size, ServiceType serviceType) throws AppException {
@@ -187,7 +187,7 @@ public class ValidationFunction {
     }
 
     public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker, ServiceType serviceType) {
-        QueueService queueService = QueueService.getInstance(ctx.getLogger());
+        QueueService queueService = QueueService.getInstance();
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker, serviceType);
         return switch (operation) {
             case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, null);

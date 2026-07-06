@@ -32,7 +32,7 @@ class GPDClientTest {
         when(resp.getStatus()).thenReturn(HttpStatus.OK.value());
         when(resp.hasEntity()).thenReturn(false);
 
-        GPDClient client = new GPDClient(Logger.getLogger("test"));
+        GPDClient client = new GPDClient();
         ResponseGPD out = invokeMapResponse(client, resp);
 
         assertEquals(RetryStep.DONE, out.getRetryStep());
@@ -49,7 +49,7 @@ class GPDClientTest {
         when(resp.hasEntity()).thenReturn(true);
         when(resp.readEntity(eq(String.class))).thenReturn(body);
 
-        GPDClient client = new GPDClient(Logger.getLogger("test"));
+        GPDClient client = new GPDClient();
         ResponseGPD out = invokeMapResponse(client, resp);
 
         assertEquals(RetryStep.ERROR, out.getRetryStep());
@@ -72,7 +72,7 @@ class GPDClientTest {
         when(resp.getStatus()).thenReturn(status.value());
         when(resp.hasEntity()).thenReturn(true);
         when(resp.readEntity(eq(String.class))).thenReturn(body);
-        GPDClient client = new GPDClient(Logger.getLogger("test"));
+        GPDClient client = new GPDClient();
         ResponseGPD out = invokeMapResponse(client, resp);
         assertEquals(RetryStep.DONE, out.getRetryStep());
         assertEquals(status.value(), out.getStatus());
@@ -95,7 +95,7 @@ class GPDClientTest {
         when(resp.getStatus()).thenReturn(HttpStatus.INTERNAL_SERVER_ERROR.value());
         when(resp.hasEntity()).thenReturn(false);
 
-        GPDClient client = new GPDClient(Logger.getLogger("test"));
+        GPDClient client = new GPDClient();
         ResponseGPD out = invokeMapResponse(client, resp);
 
         assertEquals(RetryStep.RETRY, out.getRetryStep());

@@ -20,6 +20,12 @@
             </appender>
         </then>
     </if>
+    
+    <logger name="org.testcontainers" level="WARN"/>
+    <logger name="tc" level="WARN"/>
+    <logger name="com.github.dockerjava" level="WARN"/>
+    <logger name="com.azure" level="WARN"/>
+    <logger name="com.microsoft.azure" level="WARN"/>
 
     <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="STDOUT" />

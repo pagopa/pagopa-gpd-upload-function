@@ -47,7 +47,7 @@ public class ServiceFunction {
             String key = msg.getUploadKey();
             String orgFiscalCode = msg.getOrganizationFiscalCode();
             // process message request
-            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
+            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient());
             getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
             // check if upload is completed
             Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
@@ -75,7 +75,7 @@ public class ServiceFunction {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
         objectMapper.registerModule(new JavaTimeModule());
-        return BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json", status.getServiceType());
+        return getBlobRepository().uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json", status.getServiceType());
     }
 
     public Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {
@@ -101,7 +101,11 @@ public class ServiceFunction {
         return StatusService.getInstance(ctx.getLogger());
     }
 
-    public GPDClient getGPDClient(ExecutionContext context) {
-        return GPDClient.getInstance(context.getLogger());
+    public GPDClient getGPDClient() {
+    	return new GPDClient();
+    }
+    
+    public BlobRepository getBlobRepository() {
+        return new BlobRepository();
     }
 }

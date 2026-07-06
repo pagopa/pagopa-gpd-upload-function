@@ -20,8 +20,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.function.Supplier;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.functions.util.TestUtil.*;
@@ -36,7 +34,7 @@ class ValidationFunctionTest {
 
     @Spy
     ValidationFunction validationFunction;
-    private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
+    private final ExecutionContext context = mock(ExecutionContext.class);
     private static MockedStatic<GPDValidator> positionValidatorMockedStatic;
     private MockedStatic<StatusService> mockedStaticStatusService;
     private MockedStatic<QueueService> mockedStaticQueueService;
@@ -59,7 +57,7 @@ class ValidationFunctionTest {
         mockedStaticStatusService.when(() -> StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
         QueueService mockQueueService = mock(QueueService.class);
         mockedStaticQueueService = mockStatic(QueueService.class);
-        mockedStaticQueueService.when(() -> QueueService.getInstance(mockLogger)).thenReturn(mockQueueService);
+        mockedStaticQueueService.when(() -> QueueService.getInstance()).thenReturn(mockQueueService);
     }
 
     @AfterEach
@@ -199,7 +197,7 @@ class ValidationFunctionTest {
     }
 
     @Test
-    void runEnqueueCreateMessageTest() throws Exception {
+    void runEnqueueCreateMessageTest() {
         // Prepare all mock response
         when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
@@ -211,7 +209,7 @@ class ValidationFunctionTest {
     }
 
     @Test
-    void runEnqueueDeleteMessageTest() throws Exception {
+    void runEnqueueDeleteMessageTest() {
         // Prepare all mock response
         when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
