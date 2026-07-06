@@ -13,12 +13,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.microsoft.azure.functions.HttpStatus;
 
 public class StatusService {
+	private static final org.slf4j.Logger log = LoggerFactory.getLogger(StatusService.class);
+	
     private static volatile StatusService instance;
     private static StatusRepository statusRepository;
     public Logger logger;
@@ -56,7 +58,8 @@ public class StatusService {
                 .build();
         Status status = getStatusRepository().createIfNotExist(invocationId, key, fiscalCode, statusIfNotExist);
         if (status.upload.getEnd() != null) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Upload already processed. Upload finished at: %s", invocationId, status.upload.getEnd()));
+        	log.error("[id={}][StatusService] Upload already processed. Upload finished at: {}",
+        	        invocationId, status.upload.getEnd());
             return status;
         }
 
@@ -79,10 +82,9 @@ public class StatusService {
             Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
 
             if (status == null) {
-                logger.log(Level.SEVERE, () -> String.format(
-                        "[id=%s][StatusService] Upload status not found for broker=%s, key=%s and fiscalCode=%s. " +
-                                "A fallback failed status will be created.",
-                        invocationId, broker, key, fiscalCode));
+            	log.error("[id={}][StatusService] Upload status not found for broker={}, key={} and fiscalCode={}. " +
+                        "A fallback failed status will be created.",
+                invocationId, broker, key, fiscalCode);
 
                 status = buildFallbackFailedStatus(broker, fiscalCode, key);
             }
@@ -112,9 +114,8 @@ public class StatusService {
             return true;
 
         } catch (AppException e) {
-            logger.log(Level.SEVERE, () -> String.format(
-                    "[id=%s][StatusService] Error while marking upload %s as failed: %s",
-                    invocationId, key, e.getMessage()));
+        	log.error("[id={}][StatusService] Error while marking upload {} as failed",
+        	        invocationId, key, e);
             return false;
         }
     }
@@ -123,13 +124,15 @@ public class StatusService {
         try {
             Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
             for (ResponseEntry entry : entries) {
-                logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Add response %s", invocationId, entry.getStatusMessage()));
+            	log.error("[id={}][StatusService] Add response {}",
+            	        invocationId, entry.getStatusMessage());
 
                 status.upload.addResponse(entry);
             }
             getStatusRepository().upsertStatus(invocationId, status.id, status);
         } catch (AppException e) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusService] Error while update upload Status", "invocationId"));
+        	log.error("[id={}][StatusService] Error while update upload Status",
+        	        invocationId, e);
             throw new AppException("Error while update upload Status");
         }
     }
