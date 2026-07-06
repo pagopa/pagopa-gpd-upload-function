@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa.gpd.upload</groupId>
     <artifactId>gpd-upload-function</artifactId>
-    <version>0.5.2-1</version>
+    <version>0.5.2-3-PIDM-2170-gpd-upload-error</version>
     <packaging>jar</packaging>
     <name>GPD-Upload-Function</name>
 
@@ -158,6 +158,32 @@
             <version>5.0.0</version>
         </dependency>
         <!-- validation END -->
+        
+        <!-- SLF4J / Logback / Elastic ECS logging START -->
+		<dependency>
+		    <groupId>ch.qos.logback</groupId>
+		    <artifactId>logback-classic</artifactId>
+		    <version>1.4.14</version>
+		</dependency>
+		
+		<dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.18</version>
+        </dependency>
+		
+		<dependency>
+		    <groupId>co.elastic.logging</groupId>
+		    <artifactId>logback-ecs-encoder</artifactId>
+		    <version>1.8.0</version>
+		</dependency>
+		
+		<dependency>
+		    <groupId>org.codehaus.janino</groupId>
+		    <artifactId>janino</artifactId>
+		    <version>3.1.12</version>
+		</dependency>
+        <!-- SLF4J / Logback / Elastic ECS logging END -->
 
     </dependencies>
 
@@ -284,5 +310,14 @@
                 </executions>
             </plugin>
         </plugins>
+        <resources>
+           <resource>
+               <directory>src/main/resources-filtered</directory>
+               <filtering>true</filtering>
+           </resource>
+           <resource>
+               <directory>src/main/resources</directory>
+           </resource>
+        </resources>
     </build>
 </project>

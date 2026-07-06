@@ -27,8 +27,8 @@ import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,16 +40,14 @@ import static it.gov.pagopa.gpd.upload.util.Constants.SERVICE_TYPE_KEY;
  * Validation step act as a filter and is followed by the queuing step
  */
 public class ValidationFunction {
-    private static final String LOG_PREFIX = "[id=%s][upload=%s][ValidationFunction]:";
-    
+	private static final String LOG_PREFIX = "[id={}][upload={}][ValidationFunction]:";
+	private static final Logger logger = LoggerFactory.getLogger(ValidationFunction.class);
     private static final long MAX_BLOB_CONTENT_LENGTH_BYTES = 100_000_000L;
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
             @QueueTrigger(name = "BlobCreatedEventTrigger", queueName = "%BLOB_EVENTS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String events,
             final ExecutionContext context) {
-
-        Logger logger = context.getLogger();
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
 
@@ -58,11 +56,13 @@ public class ValidationFunction {
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
-                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Call event type %s handler.", context.getInvocationId(), "-", event.getEventType()));
+            	logger.info(LOG_PREFIX + " Call event type {} handler.",
+            	        context.getInvocationId(), "-", event.getEventType());
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
 
-                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Blob event subject: %s", context.getInvocationId(), "-", event.getSubject()));
+                logger.info(LOG_PREFIX + " Blob event subject: {}",
+                        context.getInvocationId(), "-", event.getSubject());
 
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-\\h]+\\.[Jj][Ss][Oo][Nn])");
                 Matcher matcher = pattern.matcher(event.getSubject());
@@ -80,16 +80,16 @@ public class ValidationFunction {
                     subject = String.format(subjectFormat,
                             broker, fiscalCode, key);
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
-                        logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));
+                    	logger.warn(LOG_PREFIX + " Upload already in progress for event subject: {}",
+                    	        context.getInvocationId(), "-", event.getSubject());
                         return; // skip event
                     }
                     
                     if (blobData.getContentLength() == 0) {
-                        logger.log(Level.SEVERE, () -> String.format(
-                                LOG_PREFIX + "Blob content length is zero. Upload will be marked as failed and skipped.",
-                                context.getInvocationId(), key));
+                    	logger.error(LOG_PREFIX + " Blob content length is zero. Upload will be marked as failed and skipped.",
+                    	        context.getInvocationId(), key);
 
-                        this.failUpload(context, fiscalCode, key,
+                        this.failUpload(context, broker, fiscalCode, key,
                                 "Input blob content length is zero");
 
                         IdempotencyUploadTracker.unlock(subject);
@@ -104,11 +104,10 @@ public class ValidationFunction {
                                 MAX_BLOB_CONTENT_LENGTH_BYTES
                         );
 
-                        logger.log(Level.SEVERE, () -> String.format(
-                                LOG_PREFIX + "%s. Upload will be marked as failed and skipped.",
-                                context.getInvocationId(), key, failureMessage));
+                        logger.error(LOG_PREFIX + " {}. Upload will be marked as failed and skipped.",
+                                context.getInvocationId(), key, failureMessage);
 
-                        this.failUpload(context, fiscalCode, key, failureMessage);
+                        this.failUpload(context, broker, fiscalCode, key, failureMessage);
 
                         IdempotencyUploadTracker.unlock(subject);
                         continue;
@@ -118,20 +117,22 @@ public class ValidationFunction {
                     BinaryData content = (BinaryData) responseDownload.get(BLOB_KEY);
                     ServiceType serviceType = (ServiceType) responseDownload.get(SERVICE_TYPE_KEY);
 
-                    logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "broker: %s, fiscalCode: %s, filename: %s",
-                            context.getInvocationId(), key, broker, fiscalCode, filename));
+                    logger.info(LOG_PREFIX + " broker: {}, fiscalCode: {}, filename: {}",
+                            context.getInvocationId(), key, broker, fiscalCode, filename);
                     try {
                         if (!this.validateBlob(context, broker, fiscalCode, key, content, serviceType))
                             throw new AppException("Invalid blob");
                     } catch (AppException e) {
-                        logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
+                    	logger.error("[id={}][ValidationFunction] Exception while validating blob",
+                    	        context.getInvocationId(), e);
                         // Unlock idempotency key
                         IdempotencyUploadTracker.unlock(subject);
                     }
 
                     Runtime.getRuntime().gc();
                 } else {
-                    logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", context.getInvocationId()));
+                	logger.error("[id={}][ValidationFunction] No match found in the input string.",
+                	        context.getInvocationId());
                 }
             }
         }
@@ -169,8 +170,8 @@ public class ValidationFunction {
             // enqueue chunk and other input to form message
             return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker, serviceType);
         } catch (JsonProcessingException e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Processing function JsonMappingException: %s, caused by: %s",
-                    ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause()));
+        	logger.error(LOG_PREFIX + " Processing function JsonMappingException: {}, caused by: {}",
+        	        ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause());
             StatusService.getInstance(ctx.getLogger()).updateStatusEndTime(fiscalCode, uploadKey, LocalDateTime.now());
             return false;
         }
@@ -194,8 +195,8 @@ public class ValidationFunction {
         };
     }
     
-    public boolean failUpload(ExecutionContext ctx, String fiscalCode, String uploadKey, String failureMessage) {
+    public boolean failUpload(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, String failureMessage) {
         return StatusService.getInstance(ctx.getLogger())
-                .failStatus(ctx.getInvocationId(), fiscalCode, uploadKey, failureMessage);
+                .failStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, failureMessage);
     }
 }

@@ -78,12 +78,18 @@ class ValidationFunctionTest {
         String event = getMockBlobCreatedEventSize("10e+8");
 
         doReturn(true).when(validationFunction)
-                .failUpload(eq(context), anyString(), anyString(), contains("exceeds the maximum allowed threshold"));
+                .failUpload(eq(context), anyString(), anyString(), anyString(), contains("exceeds the maximum allowed threshold"));
 
         validationFunction.run(event, context);
 
         verify(validationFunction, times(1))
-                .failUpload(eq(context), anyString(), anyString(), contains("exceeds the maximum allowed threshold"));
+        .failUpload(
+                eq(context),
+                eq("broker0001"),
+                eq("ec0001"),
+                eq("77777777777f3d1"),
+                contains("exceeds the maximum allowed threshold")
+        );
 
         verify(validationFunction, never())
                 .downloadBlob(any(), any(), any(), any());
@@ -100,12 +106,18 @@ class ValidationFunctionTest {
         String event = getMockBlobCreatedEventSize("0");
 
         doReturn(true).when(validationFunction)
-                .failUpload(eq(context), anyString(), anyString(), contains("content length is zero"));
+                .failUpload(eq(context), anyString(), anyString(), anyString(), contains("content length is zero"));
 
         validationFunction.run(event, context);
 
         verify(validationFunction, times(1))
-                .failUpload(eq(context), anyString(), anyString(), contains("content length is zero"));
+        .failUpload(
+                eq(context),
+                eq("broker0001"),
+                eq("ec0001"),
+                eq("77777777777f3d1"),
+                contains("content length is zero")
+        );
 
         verify(validationFunction, never())
                 .downloadBlob(any(), any(), any(), any());
@@ -236,11 +248,7 @@ class ValidationFunctionTest {
         // Run
         validationFunction.run(events, context);
 
-        verify(mockLogger).log(
-            eq(Level.WARNING),
-            argThat((Supplier<String> supplier) ->
-                supplier != null && supplier.get().contains("Upload already in progress"))
-        );
+        verify(validationFunction, never()).downloadBlob(any(), any(), any(), any());
 
         // Cleanup
         IdempotencyUploadTracker.unlock(lockSubject);

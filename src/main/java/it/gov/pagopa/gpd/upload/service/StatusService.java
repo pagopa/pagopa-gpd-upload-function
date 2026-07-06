@@ -22,9 +22,6 @@ public class StatusService {
     private static volatile StatusService instance;
     private static StatusRepository statusRepository;
     public Logger logger;
-    
-    private static final String UNKNOWN_BROKER_ID = "UNKNOWN_BROKER";
-    private static final String FALLBACK_STATUS_MESSAGE_PREFIX = "[STATUS_NOT_FOUND_FALLBACK] ";
 
     public static StatusService getInstance(Logger logger) {
         if (instance == null) {
@@ -76,19 +73,18 @@ public class StatusService {
         return getStatusRepository().partialUpdate(key, fiscalCode, endTime);
     }
     
-    public synchronized boolean failStatus(String invocationId, String fiscalCode, String key, String failureMessage) {
+    public synchronized boolean failStatus(String invocationId, String broker, String fiscalCode, String key, String failureMessage) {
         try {
             // get previous status to update.
             Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
 
             if (status == null) {
                 logger.log(Level.SEVERE, () -> String.format(
-                        "[id=%s][StatusService] Upload status not found for key=%s and fiscalCode=%s. " +
+                        "[id=%s][StatusService] Upload status not found for broker=%s, key=%s and fiscalCode=%s. " +
                                 "A fallback failed status will be created.",
-                        invocationId, key, fiscalCode));
+                        invocationId, broker, key, fiscalCode));
 
-                status = buildFallbackFailedStatus(fiscalCode, key);
-                failureMessage = FALLBACK_STATUS_MESSAGE_PREFIX + failureMessage;
+                status = buildFallbackFailedStatus(broker, fiscalCode, key);
             }
 
             if (status.upload == null) {
@@ -106,7 +102,7 @@ public class StatusService {
 
             status.upload.getResponses().add(ResponseEntry.builder()
             		.statusCode(HttpStatus.PAYLOAD_TOO_LARGE.value()) // HTTP 413 "Content Too Large"
-                    .statusMessage(failureMessage)
+                    .statusMessage(HttpStatus.PAYLOAD_TOO_LARGE.value() + "-" + failureMessage)
                     .requestIDs(List.of())
                     .build());
 
@@ -168,10 +164,10 @@ public class StatusService {
         return StatusRepository.getInstance(logger);
     }
     
-    private Status buildFallbackFailedStatus(String fiscalCode, String key) {
+    private Status buildFallbackFailedStatus(String broker, String fiscalCode, String key) {
         return Status.builder()
                 .id(key)
-                .brokerID(UNKNOWN_BROKER_ID)
+                .brokerID(broker)
                 .fiscalCode(fiscalCode)
                 .serviceType(ServiceType.GPD)
                 .upload(Upload.builder()

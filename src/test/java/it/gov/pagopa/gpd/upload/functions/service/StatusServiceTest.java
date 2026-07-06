@@ -85,6 +85,7 @@ public class StatusServiceTest {
 
         boolean result = statusService.failStatus(
                 ctx.getInvocationId(),
+                "broker",
                 "fiscalCode",
                 "key",
                 "Input blob size 106037515 bytes exceeds the maximum allowed threshold of 100000000 bytes"
@@ -108,7 +109,9 @@ public class StatusServiceTest {
         assertEquals(1, updatedStatus.getUpload().getResponses().size());
         assertEquals(413, updatedStatus.getUpload().getResponses().get(0).getStatusCode());
         assertEquals(
-                "Input blob size 106037515 bytes exceeds the maximum allowed threshold of 100000000 bytes",
+        		updatedStatus.getUpload().getResponses().get(0).getStatusCode() 
+        		+ "-" 
+        		+ "Input blob size 106037515 bytes exceeds the maximum allowed threshold of 100000000 bytes",
                 updatedStatus.getUpload().getResponses().get(0).getStatusMessage()
         );
         assertTrue(updatedStatus.getUpload().getResponses().get(0).getRequestIDs().isEmpty());
@@ -122,6 +125,7 @@ public class StatusServiceTest {
 
         boolean result = statusService.failStatus(
                 ctx.getInvocationId(),
+                "broker",
                 "fiscalCode",
                 "key",
                 "Input blob size exceeds the maximum allowed threshold"
@@ -140,7 +144,7 @@ public class StatusServiceTest {
 
         assertEquals("key", fallbackStatus.getId());
         assertEquals("fiscalCode", fallbackStatus.getFiscalCode());
-        assertEquals("UNKNOWN_BROKER", fallbackStatus.getBrokerID());
+        assertEquals("broker", fallbackStatus.getBrokerID());
         assertEquals(ServiceType.GPD, fallbackStatus.getServiceType());
 
         assertNotNull(fallbackStatus.getUpload());
@@ -155,8 +159,11 @@ public class StatusServiceTest {
         ResponseEntry responseEntry = fallbackStatus.getUpload().getResponses().get(0);
 
         assertEquals(413, responseEntry.getStatusCode());
-        assertTrue(responseEntry.getStatusMessage().contains("[STATUS_NOT_FOUND_FALLBACK]"));
-        assertTrue(responseEntry.getStatusMessage().contains("Input blob size exceeds the maximum allowed threshold"));
+        assertEquals(
+        		responseEntry.getStatusCode() + "-" +
+                "Input blob size exceeds the maximum allowed threshold",
+                responseEntry.getStatusMessage()
+        );
         assertTrue(responseEntry.getRequestIDs().isEmpty());
     }
     
@@ -168,6 +175,7 @@ public class StatusServiceTest {
 
         boolean result = statusService.failStatus(
                 ctx.getInvocationId(),
+                "broker",
                 "fiscalCode",
                 "key",
                 "Input blob size exceeds the maximum allowed threshold"
