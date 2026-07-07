@@ -7,6 +7,7 @@ import com.microsoft.azure.functions.ExecutionContext;
 import it.gov.pagopa.gpd.upload.ValidationFunction;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
+import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
@@ -37,7 +38,6 @@ class ValidationFunctionTest {
     private final ExecutionContext context = mock(ExecutionContext.class);
     private static MockedStatic<GPDValidator> positionValidatorMockedStatic;
     private MockedStatic<StatusService> mockedStaticStatusService;
-    private MockedStatic<QueueService> mockedStaticQueueService;
     private Logger mockLogger;
     private static final String DEFAULT_LOCK_SUBJECT =
             "/containers/broker0001/blobs/ec0001/77777777777f3d1";
@@ -52,12 +52,10 @@ class ValidationFunctionTest {
         IdempotencyUploadTracker.unlock(DEFAULT_LOCK_SUBJECT);
 
         mockLogger = mock(Logger.class);
+
         StatusService mockStatusService = mock(StatusService.class);
         mockedStaticStatusService = mockStatic(StatusService.class);
         mockedStaticStatusService.when(StatusService::getInstance).thenReturn(mockStatusService);
-        QueueService mockQueueService = mock(QueueService.class);
-        mockedStaticQueueService = mockStatic(QueueService.class);
-        mockedStaticQueueService.when(QueueService::getInstance).thenReturn(mockQueueService);
     }
 
     @AfterEach
@@ -65,7 +63,6 @@ class ValidationFunctionTest {
         IdempotencyUploadTracker.unlock(DEFAULT_LOCK_SUBJECT);
 
         mockedStaticStatusService.close();
-        mockedStaticQueueService.close();
     }
 
     @Test
@@ -198,25 +195,86 @@ class ValidationFunctionTest {
 
     @Test
     void runEnqueueCreateMessageTest() {
-        // Prepare all mock response
         when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
 
-        // Run function method and assert
+        QueueService mockQueueService = mock(QueueService.class);
+
+        doReturn(mockQueueService)
+                .when(validationFunction)
+                .getQueueService();
+
+        when(mockQueueService.generateMessageBuilder(
+                eq(CRUDOperation.CREATE),
+                eq("key"),
+                eq("code"),
+                eq("broker-id"),
+                eq(ServiceType.GPD)
+        )).thenReturn(QueueMessage.builder());
+
+        when(mockQueueService.enqueueUpsertMessage(
+                eq(context),
+                any(ObjectMapper.class),
+                anyList(),
+                any(QueueMessage.QueueMessageBuilder.class),
+                eq(0),
+                isNull()
+        )).thenReturn(false);
+
         Assertions.assertFalse(
-                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.CREATE, new ArrayList<>(), null, "key", "code", "broker-id", ServiceType.GPD)
+                validationFunction.enqueue(
+                        context,
+                        new ObjectMapper(),
+                        CRUDOperation.CREATE,
+                        new ArrayList<>(),
+                        null,
+                        "key",
+                        "code",
+                        "broker-id",
+                        ServiceType.GPD
+                )
         );
     }
 
     @Test
     void runEnqueueDeleteMessageTest() {
-        // Prepare all mock response
         when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
 
-        // Run function method and assert
+        QueueService mockQueueService = mock(QueueService.class);
+
+        doReturn(mockQueueService)
+                .when(validationFunction)
+                .getQueueService();
+
+        when(mockQueueService.generateMessageBuilder(
+                eq(CRUDOperation.DELETE),
+                eq("key"),
+                eq("code"),
+                eq("broker-id"),
+                eq(ServiceType.GPD)
+        )).thenReturn(QueueMessage.builder());
+
+        when(mockQueueService.enqueueDeleteMessage(
+                eq(context),
+                any(ObjectMapper.class),
+                anyList(),
+                any(QueueMessage.QueueMessageBuilder.class),
+                eq(0)
+        )).thenReturn(false);
+
         Assertions.assertFalse(
-                validationFunction.enqueue(context, new ObjectMapper(), CRUDOperation.DELETE, null, new ArrayList<>(), "key", "code", "broker-id", ServiceType.GPD)
+                validationFunction.enqueue(
+                        context,
+                        new ObjectMapper(),
+                        CRUDOperation.DELETE,
+                        null,
+                        new ArrayList<>(),
+                        "key",
+                        "code",
+                        "broker-id",
+                        ServiceType.GPD
+                )
         );
     }
     

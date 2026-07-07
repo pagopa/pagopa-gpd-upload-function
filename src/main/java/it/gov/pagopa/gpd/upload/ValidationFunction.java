@@ -180,18 +180,22 @@ public class ValidationFunction {
     public Map<String, Object> downloadBlob(String broker, String fiscalCode, String filename) {
     	return new BlobRepository().download(broker, fiscalCode, filename);
     }
+    
+    public QueueService getQueueService() {
+        return new QueueService();
+    }
 
     public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size, ServiceType serviceType) throws AppException {
         return StatusService.getInstance()
                 .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size, serviceType);
     }
 
-    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker, ServiceType serviceType) {
-        QueueService queueService = QueueService.getInstance();
+    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> iupdList, String uploadKey, String fiscalCode, String broker, ServiceType serviceType) {
+        QueueService queueService = getQueueService();
         QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker, serviceType);
         return switch (operation) {
             case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, null);
-            case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
+            case DELETE -> queueService.enqueueDeleteMessage(ctx, om, iupdList, builder, 0);
         };
     }
     

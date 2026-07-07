@@ -21,8 +21,6 @@ import java.util.List;
 public class QueueService {
     private static final Logger log = LoggerFactory.getLogger(QueueService.class);
 
-    private static volatile QueueService instance;
-
     private static final String GPD_SA_CONNECTION_STRING = System.getenv("GPD_SA_CONNECTION_STRING");
     private static final String VALID_POSITIONS_QUEUE =
             System.getenv("VALID_POSITIONS_QUEUE") != null ? System.getenv("VALID_POSITIONS_QUEUE") : "VALID_POSITIONS_QUEUE";
@@ -30,32 +28,14 @@ public class QueueService {
     public static final Integer CHUNK_SIZE =
             System.getenv("CHUNK_SIZE") != null ? Integer.parseInt(System.getenv("CHUNK_SIZE")) : 20;
 
-    private CloudQueue cloudQueue;
+    private final CloudQueue cloudQueue;
 
     public QueueService() {
-        try {
-            cloudQueue = CloudStorageAccount.parse(GPD_SA_CONNECTION_STRING)
-                    .createCloudQueueClient()
-                    .getQueueReference(VALID_POSITIONS_QUEUE);
-        } catch (URISyntaxException | StorageException | InvalidKeyException e) {
-            log.error("[QueueService] Processing function exception while initializing queue {}",
-                    VALID_POSITIONS_QUEUE, e);
-        }
+        this(createCloudQueue());
     }
 
     public QueueService(CloudQueue cloudQueue) {
         this.cloudQueue = cloudQueue;
-    }
-
-    public static QueueService getInstance() {
-        if (instance == null) {
-            synchronized (QueueService.class) {
-                if (instance == null) {
-                    instance = new QueueService();
-                }
-            }
-        }
-        return instance;
     }
 
     public boolean enqueue(String invocationId, String message, int initialVisibilityDelayInSeconds) {
@@ -170,5 +150,17 @@ public class QueueService {
         }
 
         return true;
+    }
+    
+    private static CloudQueue createCloudQueue() {
+        try {
+            return CloudStorageAccount.parse(GPD_SA_CONNECTION_STRING)
+                    .createCloudQueueClient()
+                    .getQueueReference(VALID_POSITIONS_QUEUE);
+        } catch (URISyntaxException | StorageException | InvalidKeyException e) {
+            log.error("[QueueService] Processing function exception while initializing queue {}",
+                    VALID_POSITIONS_QUEUE, e);
+            return null;
+        }
     }
 }

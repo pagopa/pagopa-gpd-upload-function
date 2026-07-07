@@ -117,6 +117,6 @@ public class CRUDService {
                 queueMessage.getUploadKey(),
                 debtPositionMessage.getRetryCounter(),
                 RETRY_DELAY);
-        return QueueService.getInstance().enqueue(id, om.writeValueAsString(queueMessage), RETRY_DELAY);
+        return new QueueService().enqueue(id, om.writeValueAsString(queueMessage), RETRY_DELAY);
     }
 }
