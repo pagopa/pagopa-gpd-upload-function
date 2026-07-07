@@ -5,7 +5,7 @@
 
     <groupId>it.gov.pagopa.gpd.upload</groupId>
     <artifactId>gpd-upload-function</artifactId>
-    <version>0.5.2-4-PIDM-2170-gpd-upload-error</version>
+    <version>0.5.2-5-PIDM-2170-gpd-upload-error</version>
     <packaging>jar</packaging>
     <name>GPD-Upload-Function</name>
 
@@ -176,12 +176,6 @@
 		    <groupId>co.elastic.logging</groupId>
 		    <artifactId>logback-ecs-encoder</artifactId>
 		    <version>1.8.0</version>
-		</dependency>
-		
-		<dependency>
-		    <groupId>org.codehaus.janino</groupId>
-		    <artifactId>janino</artifactId>
-		    <version>3.1.12</version>
 		</dependency>
         <!-- SLF4J / Logback / Elastic ECS logging END -->
 

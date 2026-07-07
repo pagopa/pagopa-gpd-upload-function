@@ -3,30 +3,23 @@
 
     <property resource="application.properties" />
 
+    <!-- Emit application logs as ECS JSON on stdout for ELK ingestion. -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        <encoder class="co.elastic.logging.logback.EcsEncoder">
+            <serviceName>${SERVICE_NAME:-pagopa-gpd-upload-function}</serviceName>
+            <serviceVersion>${version:-unknown}</serviceVersion>
+            <serviceEnvironment>${ENV:-unknown}</serviceEnvironment>
         </encoder>
     </appender>
 
-    <if condition='!"APP_ENVIRONMENT_IS_UNDEFINED".equalsIgnoreCase("${ENV}")'>
-        <then>
-            <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-                <encoder class="co.elastic.logging.logback.EcsEncoder">
-                    <serviceName>${SERVICE_NAME}</serviceName>
-                    <serviceVersion>${version}</serviceVersion>
-                    <serviceEnvironment>${ENV}</serviceEnvironment>
-                </encoder>
-            </appender>
-        </then>
-    </if>
-    
+    <!-- Reduce noisy logs from test and infrastructure libraries. -->
     <logger name="org.testcontainers" level="WARN"/>
     <logger name="tc" level="WARN"/>
     <logger name="com.github.dockerjava" level="WARN"/>
     <logger name="com.azure" level="WARN"/>
     <logger name="com.microsoft.azure" level="WARN"/>
 
+    <!-- Use the configured application log level, defaulting to INFO. -->
     <root level="${LOG_LEVEL:-INFO}">
         <appender-ref ref="STDOUT" />
     </root>
