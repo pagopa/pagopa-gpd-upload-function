@@ -100,13 +100,13 @@ public class QueueService {
     public boolean enqueueDeleteMessage(
             ExecutionContext ctx,
             ObjectMapper om,
-            List<String> IUPDList,
+            List<String> iupdList,
             QueueMessage.QueueMessageBuilder builder,
             int delay) {
 
-        for (int i = 0; i < IUPDList.size(); i += CHUNK_SIZE) {
-            List<String> IUPDSubList = IUPDList.subList(i, Math.min(i + CHUNK_SIZE, IUPDList.size()));
-            QueueMessage message = builder.paymentPositionIUPDs(IUPDSubList).build();
+        for (int i = 0; i < iupdList.size(); i += CHUNK_SIZE) {
+            List<String> iupdSubList = iupdList.subList(i, Math.min(i + CHUNK_SIZE, iupdList.size()));
+            QueueMessage message = builder.paymentPositionIUPDs(iupdSubList).build();
 
             try {
                 boolean enqueued = enqueue(ctx.getInvocationId(), om.writeValueAsString(message), delay);
