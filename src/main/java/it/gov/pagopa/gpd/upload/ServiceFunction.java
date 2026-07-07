@@ -56,7 +56,7 @@ public class ServiceFunction {
 	        Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient());
 	        getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
 	        // check if upload is completed
-	        Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, uploadKey);
+	        Status status = getStatusService().getStatus(invocationId, orgFiscalCode, uploadKey);
 	        if (status.upload.getCurrent() == status.upload.getTotal()) {
 	            subject = String.format(
 	                    SUBJECT_FORMAT,
@@ -68,7 +68,7 @@ public class ServiceFunction {
 	            IdempotencyUploadTracker.unlock(subject);
 	            LocalDateTime endTime = LocalDateTime.now();
 	            status.upload.setEnd(endTime);
-	            getStatusService(ctx).updateStatusEndTime(orgFiscalCode, uploadKey, endTime);
+	            getStatusService().updateStatusEndTime(orgFiscalCode, uploadKey, endTime);
 	            boolean reportGenerated = generateReport(uploadKey, status);
 	            if (reportGenerated) {
 	                log.info(LOG_PREFIX + " Upload completed and report generated. Subject unlocked: {}",
@@ -110,7 +110,7 @@ public class ServiceFunction {
     }
 
     public CRUDService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage debtPositionMessage) {
-        return new CRUDService(ctx, method, debtPositionMessage, getStatusService(ctx));
+        return new CRUDService(ctx, method, debtPositionMessage, getStatusService());
     }
 
     public DebtPositionMessage getPositionMessage(QueueMessage queueMessage) {
@@ -120,7 +120,7 @@ public class ServiceFunction {
         };
     }
 
-    public StatusService getStatusService(ExecutionContext ctx) {
+    public StatusService getStatusService() {
         return StatusService.getInstance();
     }
 

@@ -1,10 +1,9 @@
-package it.gov.pagopa.gpd.upload.functions.function;
+package it.gov.pagopa.gpd.upload;
 
 import com.microsoft.azure.functions.ExecutionContext;
 import com.microsoft.azure.functions.HttpRequestMessage;
 import com.microsoft.azure.functions.HttpResponseMessage;
 import com.microsoft.azure.functions.HttpStatus;
-import it.gov.pagopa.gpd.upload.Info;
 import it.gov.pagopa.gpd.upload.model.AppInfo;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
@@ -13,10 +12,13 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -81,6 +83,26 @@ class InfoTest {
         assertNull(response.getName());
         assertNull(response.getVersion());
         assertNotNull(response.getEnvironment());
+    }
+    
+    @Test
+    void getInfoReturnsDefaultInfoWhenPropertiesLoadingFails() throws IOException {
+        InputStream brokenInputStream = mock(InputStream.class);
+
+        doReturn(brokenInputStream)
+                .when(infoFunction)
+                .getResourceAsStream("/broken/pom.properties");
+
+        doReturn(1)
+                .doThrow(new IOException("boom"))
+                .when(brokenInputStream)
+                .read(any(byte[].class), anyInt(), anyInt());
+
+        AppInfo response = infoFunction.getInfo("/broken/pom.properties");
+
+        assertNull(response.getName());
+        assertNull(response.getVersion());
+        assertEquals("azure-fn", response.getEnvironment());
     }
 
 }

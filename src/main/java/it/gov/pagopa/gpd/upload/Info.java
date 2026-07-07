@@ -44,7 +44,7 @@ public class Info {
 		String name = null;
 		try {
 			Properties properties = new Properties();
-			InputStream inputStream = getClass().getResourceAsStream(path);
+			InputStream inputStream = getResourceAsStream(path);
 			if (inputStream != null) {
 				properties.load(inputStream);
 				version = properties.getProperty("version", null);
@@ -54,5 +54,9 @@ public class Info {
 			log.error("[Info] Impossible to retrieve information from pom.properties file.", e);
 		}
 		return AppInfo.builder().version(version).environment("azure-fn").name(name).build();
+	}
+	
+	protected InputStream getResourceAsStream(String path) {
+	    return getClass().getResourceAsStream(path);
 	}
 }
