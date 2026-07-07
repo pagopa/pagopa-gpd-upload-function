@@ -48,7 +48,7 @@ class ServiceFunctionTest {
     @Mock
     BlobRepository blobRepository;
 
-    private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
+    private final ExecutionContext context = mock(ExecutionContext.class);
 
 
     @Test
@@ -190,7 +190,7 @@ class ServiceFunctionTest {
             mockStatus.upload.setCurrent(5);
             mockStatus.upload.setTotal(5);
 
-            mockedStatusService.when(() -> StatusService.getInstance()).thenReturn(mockStatusService);
+            mockedStatusService.when(StatusService::getInstance).thenReturn(mockStatusService);
             when(mockStatusService.getStatus("testInvocationId", "org123", "uploadKey123")).thenReturn(mockStatus);
 
             when(mockStatusService.updateStatusEndTime(eq("org123"), eq("uploadKey123"), any())).thenReturn(false);

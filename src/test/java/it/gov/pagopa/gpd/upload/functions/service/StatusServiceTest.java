@@ -31,8 +31,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class StatusServiceTest {
-    private static final ExecutionContext ctx = Mockito.mock(ExecutionContext.class);
+class StatusServiceTest {
+    private static final ExecutionContext ctx = mock(ExecutionContext.class);
 
     @Spy
     static StatusService statusService;
@@ -42,7 +42,7 @@ public class StatusServiceTest {
 
 
     @BeforeAll
-    public static void init() {
+    static void init() {
         Logger logger = Logger.getLogger("gpd-upload-test-logger");
         when(ctx.getLogger()).thenReturn(logger);
         when(ctx.getInvocationId()).thenReturn("testInvocationId");
@@ -65,7 +65,7 @@ public class StatusServiceTest {
     }
 
     @Test
-    void updateStatusEndTimeOK() throws AppException {
+    void updateStatusEndTimeOK() {
         doReturn(statusRepository).when(statusService).getStatusRepository();
         //Assertion
         assertNotNull(statusService.updateStatusEndTime("fiscalCode", "key", LocalDateTime.now()));
