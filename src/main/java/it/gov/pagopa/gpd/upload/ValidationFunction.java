@@ -113,7 +113,7 @@ public class ValidationFunction {
                         continue;
                     }
 
-                    Map<String, Object> responseDownload = this.downloadBlob(context, broker, fiscalCode, filename);
+                    Map<String, Object> responseDownload = this.downloadBlob(broker, fiscalCode, filename);
                     BinaryData content = (BinaryData) responseDownload.get(BLOB_KEY);
                     ServiceType serviceType = (ServiceType) responseDownload.get(SERVICE_TYPE_KEY);
 
@@ -177,7 +177,7 @@ public class ValidationFunction {
         }
     }
 
-    public Map<String, Object> downloadBlob(ExecutionContext ctx, String broker, String fiscalCode, String filename) {
+    public Map<String, Object> downloadBlob(String broker, String fiscalCode, String filename) {
     	return new BlobRepository().download(broker, fiscalCode, filename);
     }
 

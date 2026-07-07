@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.Arguments;
 
 import javax.ws.rs.core.Response;
 import java.lang.reflect.Method;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;

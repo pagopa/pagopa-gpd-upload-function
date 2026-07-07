@@ -90,7 +90,7 @@ class ValidationFunctionTest {
         );
 
         verify(validationFunction, never())
-                .downloadBlob(any(), any(), any(), any());
+                .downloadBlob(any(), any(), any());
 
         verify(validationFunction, never())
                 .validateBlob(any(), any(), any(), any(), any(), any());
@@ -118,7 +118,7 @@ class ValidationFunctionTest {
         );
 
         verify(validationFunction, never())
-                .downloadBlob(any(), any(), any(), any());
+                .downloadBlob(any(), any(), any());
 
         verify(validationFunction, never())
                 .validateBlob(any(), any(), any(), any(), any(), any());
@@ -133,7 +133,7 @@ class ValidationFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
-        lenient().doReturn(response).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(response).when(validationFunction).downloadBlob(any(), any(), any());
         lenient().doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt(), any(ServiceType.class));
         lenient().doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
@@ -154,7 +154,7 @@ class ValidationFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
-        lenient().doReturn(response).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        lenient().doReturn(response).when(validationFunction).downloadBlob(any(), any(), any());
         lenient().doReturn(false).when(validationFunction).validateBlob(any(), any(), any(), any(), any(), any(ServiceType.class));
         // Set mock event
         String event = getMockBlobCreatedEvent();
@@ -173,7 +173,7 @@ class ValidationFunctionTest {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockDeleteInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
-        doReturn(response).when(validationFunction).downloadBlob(any(), any(), any(), any());
+        doReturn(response).when(validationFunction).downloadBlob(any(), any(), any());
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt(), any(ServiceType.class));
         doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
@@ -246,7 +246,7 @@ class ValidationFunctionTest {
         // Run
         validationFunction.run(events, context);
 
-        verify(validationFunction, never()).downloadBlob(any(), any(), any(), any());
+        verify(validationFunction, never()).downloadBlob(any(), any(), any());
 
         // Cleanup
         IdempotencyUploadTracker.unlock(lockSubject);
