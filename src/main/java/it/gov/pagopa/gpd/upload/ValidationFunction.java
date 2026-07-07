@@ -13,7 +13,6 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
-import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
@@ -168,7 +167,7 @@ public class ValidationFunction {
             }
 
             // enqueue chunk and other input to form message
-            return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker, serviceType);
+            return enqueue(ctx, om, input, uploadKey, fiscalCode, broker, serviceType);
         } catch (JsonProcessingException e) {
         	logger.error(LOG_PREFIX + " Processing function JsonMappingException: {}, caused by: {}",
         	        ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause());
@@ -190,12 +189,41 @@ public class ValidationFunction {
                 .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size, serviceType);
     }
 
-    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> iupdList, String uploadKey, String fiscalCode, String broker, ServiceType serviceType) {
+    public boolean enqueue(
+            ExecutionContext ctx,
+            ObjectMapper om,
+            UploadInput input,
+            String uploadKey,
+            String fiscalCode,
+            String broker,
+            ServiceType serviceType) {
+
         QueueService queueService = getQueueService();
-        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker, serviceType);
-        return switch (operation) {
-            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, null);
-            case DELETE -> queueService.enqueueDeleteMessage(ctx, om, iupdList, builder, 0);
+
+        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(
+                input.getOperation(),
+                uploadKey,
+                fiscalCode,
+                broker,
+                serviceType
+        );
+
+        return switch (input.getOperation()) {
+            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(
+                    ctx,
+                    om,
+                    input.getPaymentPositions(),
+                    builder,
+                    0,
+                    null
+            );
+            case DELETE -> queueService.enqueueDeleteMessage(
+                    ctx,
+                    om,
+                    input.getPaymentPositionIUPDs(),
+                    builder,
+                    0
+            );
         };
     }
     

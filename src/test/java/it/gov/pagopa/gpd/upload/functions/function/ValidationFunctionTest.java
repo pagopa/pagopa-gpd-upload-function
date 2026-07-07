@@ -8,6 +8,7 @@ import it.gov.pagopa.gpd.upload.ValidationFunction;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
+import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
 import it.gov.pagopa.gpd.upload.service.QueueService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
@@ -132,7 +133,7 @@ class ValidationFunctionTest {
         Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockCreateInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
         lenient().doReturn(response).when(validationFunction).downloadBlob(any(), any(), any());
         lenient().doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt(), any(ServiceType.class));
-        lenient().doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any(), any());
+        lenient().doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
@@ -172,7 +173,7 @@ class ValidationFunctionTest {
         Map<String, Object> response = Map.of(BLOB_KEY, BinaryData.fromString(objectMapper.writeValueAsString(getMockDeleteInputData())), SERVICE_TYPE_KEY, ServiceType.GPD);
         doReturn(response).when(validationFunction).downloadBlob(any(), any(), any());
         doReturn(getMockStatus()).when(validationFunction).createStatus(any(), any(), any(), any(), anyInt(), any(ServiceType.class));
-        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any(), any(), any());
+        doReturn(true).when(validationFunction).enqueue(any(), any(), any(), any(), any(), any(), any());
         positionValidatorMockedStatic.when(() -> GPDValidator.validate(any(),any(), any(), any())).thenReturn(true);
         // Set mock event
         String event = getMockBlobCreatedEvent();
@@ -195,7 +196,6 @@ class ValidationFunctionTest {
 
     @Test
     void runEnqueueCreateMessageTest() {
-        when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
 
         QueueService mockQueueService = mock(QueueService.class);
@@ -205,11 +205,11 @@ class ValidationFunctionTest {
                 .getQueueService();
 
         when(mockQueueService.generateMessageBuilder(
-                eq(CRUDOperation.CREATE),
-                eq("key"),
-                eq("code"),
-                eq("broker-id"),
-                eq(ServiceType.GPD)
+                CRUDOperation.CREATE,
+                "key",
+                "code",
+                "broker-id",
+                ServiceType.GPD
         )).thenReturn(QueueMessage.builder());
 
         when(mockQueueService.enqueueUpsertMessage(
@@ -221,13 +221,16 @@ class ValidationFunctionTest {
                 isNull()
         )).thenReturn(false);
 
+        UploadInput input = UploadInput.builder()
+                .operation(CRUDOperation.CREATE)
+                .paymentPositions(new ArrayList<>())
+                .build();
+
         Assertions.assertFalse(
                 validationFunction.enqueue(
                         context,
                         new ObjectMapper(),
-                        CRUDOperation.CREATE,
-                        new ArrayList<>(),
-                        null,
+                        input,
                         "key",
                         "code",
                         "broker-id",
@@ -238,7 +241,6 @@ class ValidationFunctionTest {
 
     @Test
     void runEnqueueDeleteMessageTest() {
-        when(context.getLogger()).thenReturn(mockLogger);
         when(context.getInvocationId()).thenReturn("testInvocationId");
 
         QueueService mockQueueService = mock(QueueService.class);
@@ -248,11 +250,11 @@ class ValidationFunctionTest {
                 .getQueueService();
 
         when(mockQueueService.generateMessageBuilder(
-                eq(CRUDOperation.DELETE),
-                eq("key"),
-                eq("code"),
-                eq("broker-id"),
-                eq(ServiceType.GPD)
+                CRUDOperation.DELETE,
+                "key",
+                "code",
+                "broker-id",
+                ServiceType.GPD
         )).thenReturn(QueueMessage.builder());
 
         when(mockQueueService.enqueueDeleteMessage(
@@ -263,13 +265,16 @@ class ValidationFunctionTest {
                 eq(0)
         )).thenReturn(false);
 
+        UploadInput input = UploadInput.builder()
+                .operation(CRUDOperation.DELETE)
+                .paymentPositionIUPDs(new ArrayList<>())
+                .build();
+
         Assertions.assertFalse(
                 validationFunction.enqueue(
                         context,
                         new ObjectMapper(),
-                        CRUDOperation.DELETE,
-                        null,
-                        new ArrayList<>(),
+                        input,
                         "key",
                         "code",
                         "broker-id",
