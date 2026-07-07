@@ -172,7 +172,7 @@ public class ValidationFunction {
         } catch (JsonProcessingException e) {
         	logger.error(LOG_PREFIX + " Processing function JsonMappingException: {}, caused by: {}",
         	        ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause());
-            StatusService.getInstance(ctx.getLogger()).updateStatusEndTime(fiscalCode, uploadKey, LocalDateTime.now());
+            StatusService.getInstance().updateStatusEndTime(fiscalCode, uploadKey, LocalDateTime.now());
             return false;
         }
     }
@@ -182,7 +182,7 @@ public class ValidationFunction {
     }
 
     public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size, ServiceType serviceType) throws AppException {
-        return StatusService.getInstance(ctx.getLogger())
+        return StatusService.getInstance()
                 .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size, serviceType);
     }
 
@@ -196,7 +196,7 @@ public class ValidationFunction {
     }
     
     public boolean failUpload(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, String failureMessage) {
-        return StatusService.getInstance(ctx.getLogger())
+        return StatusService.getInstance()
                 .failStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, failureMessage);
     }
 }

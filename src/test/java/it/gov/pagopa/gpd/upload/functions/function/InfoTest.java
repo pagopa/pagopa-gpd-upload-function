@@ -14,7 +14,6 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
-import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -57,11 +56,10 @@ class InfoTest {
     void getInfoOk() {
 
         // Mocking service creation
-        Logger logger = Logger.getLogger("example-test-logger");
         String path = "/META-INF/maven/it.gov.pagopa.gpd.upload/gpd-upload-function/pom.properties";
 
         // Execute function
-        AppInfo response = infoFunction.getInfo(logger, path);
+        AppInfo response = infoFunction.getInfo(path);
 
         // Checking assertions
         assertNotNull(response.getName());
@@ -74,11 +72,10 @@ class InfoTest {
     void getInfoKo() {
 
         // Mocking service creation
-        Logger logger = Logger.getLogger("example-test-logger");
         String path = "/META-INF/maven/it.gov.pagopa.gpd.upload/gpd-upload-function/fake";
 
         // Execute function
-        AppInfo response = infoFunction.getInfo(logger, path);
+        AppInfo response = infoFunction.getInfo(path);
 
         // Checking assertions
         assertNull(response.getName());

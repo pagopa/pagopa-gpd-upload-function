@@ -210,7 +210,6 @@ public class StatusServiceTest {
         doReturn(statusRepository).when(statusService).getStatusRepository();
         doReturn(getMockStatus()).when(statusRepository).getStatus(any(), any(), any());
         doNothing().when(statusRepository).upsertStatus(any(), any(), any());
-        statusService.logger = Logger.getLogger("JUnit-test");
         statusService.updateStatus(ctx.getInvocationId(), "fiscalCode", "key", getMockResponseEntries());
         //Assertion
         assertTrue(true);

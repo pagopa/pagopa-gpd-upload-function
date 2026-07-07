@@ -54,7 +54,7 @@ class ValidationFunctionTest {
         mockLogger = mock(Logger.class);
         StatusService mockStatusService = mock(StatusService.class);
         mockedStaticStatusService = mockStatic(StatusService.class);
-        mockedStaticStatusService.when(() -> StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
+        mockedStaticStatusService.when(() -> StatusService.getInstance()).thenReturn(mockStatusService);
         QueueService mockQueueService = mock(QueueService.class);
         mockedStaticQueueService = mockStatic(QueueService.class);
         mockedStaticQueueService.when(() -> QueueService.getInstance()).thenReturn(mockQueueService);

@@ -49,13 +49,8 @@ class ServiceFunctionTest {
     @Mock
     BlobRepository blobRepository;
 
-    private Logger mockLogger;
     private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
 
-    @BeforeEach
-    void setUp() {
-        mockLogger = mock(Logger.class);
-    }
 
     @Test
     void runBulkCreateOK() throws Exception {
@@ -169,13 +164,12 @@ class ServiceFunctionTest {
         doReturn(false).when(blobRepository)
                 .uploadReport(anyString(), anyString(), anyString(), anyString(), any());
         
-        Assertions.assertFalse(serviceFunction.generateReport(mockLogger, "key", status));
+        Assertions.assertFalse(serviceFunction.generateReport("key", status));
     }
     
     @Test
     void runUnlocksIdempotencyKeyWhenUploadCompletes() throws Exception {
         ExecutionContext mockContext = mock(ExecutionContext.class);
-        when(mockContext.getLogger()).thenReturn(mockLogger);
         when(mockContext.getInvocationId()).thenReturn("testInvocationId");
 
         QueueMessage message = new QueueMessage();
@@ -197,7 +191,7 @@ class ServiceFunctionTest {
             mockStatus.upload.setCurrent(5);
             mockStatus.upload.setTotal(5);
 
-            mockedStatusService.when(() -> StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
+            mockedStatusService.when(() -> StatusService.getInstance()).thenReturn(mockStatusService);
             when(mockStatusService.getStatus("testInvocationId", "org123", "uploadKey123")).thenReturn(mockStatus);
 
             when(mockStatusService.updateStatusEndTime(eq("org123"), eq("uploadKey123"), any())).thenReturn(false);

@@ -13,35 +13,24 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.microsoft.azure.functions.HttpStatus;
 
 public class StatusService {
-	private static final org.slf4j.Logger log = LoggerFactory.getLogger(StatusService.class);
-	
+	private static final Logger log = LoggerFactory.getLogger(StatusService.class);
     private static volatile StatusService instance;
-    private static StatusRepository statusRepository;
-    public Logger logger;
 
-    public static StatusService getInstance(Logger logger) {
+    public static StatusService getInstance() {
         if (instance == null) {
             synchronized (StatusService.class) {
                 if (instance == null) {
-                    instance = new StatusService(logger);
+                    instance = new StatusService();
                 }
             }
         }
         return instance;
-    }
-
-    public StatusService() {
-    }
-
-    public StatusService(Logger logger) {
-        this.logger = logger;
-        statusRepository = StatusRepository.getInstance(logger);
     }
 
     public Status createStatus(String invocationId, String broker, String fiscalCode, String key, int totalPosition, ServiceType serviceType) throws AppException {
@@ -164,7 +153,7 @@ public class StatusService {
     }
 
     public StatusRepository getStatusRepository() {
-        return StatusRepository.getInstance(logger);
+        return StatusRepository.getInstance();
     }
     
     private Status buildFallbackFailedStatus(String broker, String fiscalCode, String key) {

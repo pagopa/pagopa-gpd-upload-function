@@ -14,10 +14,17 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GPDValidator {
+	
+	private GPDValidator() {
+		super();
+	}
+
+	private static final Logger log = LoggerFactory.getLogger(GPDValidator.class);
+	private static final String LOG_PREFIX = "[id={}][upload={}][GPDValidator]";
 
     public static boolean validate(ExecutionContext ctx, List<PaymentPosition> paymentPositions, String fiscalCode, String uploadKey) {
         ValidatorFactory factory = jakarta.validation.Validation.buildDefaultValidatorFactory();
@@ -31,7 +38,7 @@ public class GPDValidator {
             violations =  validator.validate(paymentPosition);
 
             if (!violations.isEmpty()) {
-                entries.add(createResponseEntry(ctx.getLogger(), paymentPosition, violations));
+            	entries.add(createResponseEntry(ctx.getInvocationId(), uploadKey, paymentPosition, violations));
                 iterator.remove();
             }
         }
@@ -39,7 +46,12 @@ public class GPDValidator {
         return updateStatus(ctx, fiscalCode, uploadKey, entries);
     }
 
-    private static ResponseEntry createResponseEntry(Logger logger, PaymentPosition paymentPosition, Set<ConstraintViolation<PaymentPosition>> violations) {
+    private static ResponseEntry createResponseEntry(
+            String invocationId,
+            String uploadKey,
+            PaymentPosition paymentPosition,
+            Set<ConstraintViolation<PaymentPosition>> violations
+    ) {
         ConstraintViolation<PaymentPosition> violation = violations.stream().findFirst().orElse(null);
         String details = (violation != null ? violation.getMessage() : "");
 
@@ -49,8 +61,12 @@ public class GPDValidator {
                                               .requestIDs(List.of(paymentPosition.getIupd()))
                                               .build();
 
-        for(ConstraintViolation<PaymentPosition> v : violations) {
-            logger.log(Level.INFO, "Payment position " + paymentPosition.getIupd() + " is not valid, violation: " + v.getMessage());
+        for (ConstraintViolation<PaymentPosition> violationEntry : violations) {
+            log.info(LOG_PREFIX + " Payment position {} is not valid, violation: {}",
+                    invocationId,
+                    uploadKey,
+                    paymentPosition.getIupd(),
+                    violationEntry.getMessage());
         }
 
         return responseEntry;
@@ -58,10 +74,11 @@ public class GPDValidator {
 
     private static boolean updateStatus(ExecutionContext ctx, String orgFiscalCode, String key, List<ResponseEntry> entries) {
         try {
-            StatusService.getInstance(ctx.getLogger()).updateStatus(ctx.getInvocationId(), orgFiscalCode, key, entries);
+            StatusService.getInstance().updateStatus(ctx.getInvocationId(), orgFiscalCode, key, entries);
         } catch (AppException e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", ctx.getInvocationId()));
-            return false;
+        	log.error(LOG_PREFIX + " Error while updating status with validation errors",
+        	        ctx.getInvocationId(), key, e);
+        	return false;
         }
         return true;
     }
