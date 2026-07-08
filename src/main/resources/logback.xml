@@ -3,8 +3,11 @@
 
     <property resource="application.properties" />
 
-    <!-- Emit application logs as ECS JSON on stdout for ELK ingestion. -->
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- Emit application logs as ECS JSON directly to the container stdout. -->
+    <appender name="CONTAINER_STDOUT" class="ch.qos.logback.core.FileAppender">
+        <file>/proc/1/fd/1</file>
+        <append>true</append>
+        <immediateFlush>true</immediateFlush>
         <encoder class="co.elastic.logging.logback.EcsEncoder">
             <serviceName>${SERVICE_NAME:-pagopa-gpd-upload-function}</serviceName>
             <serviceVersion>${version:-unknown}</serviceVersion>
@@ -21,7 +24,7 @@
 
     <!-- Use the configured application log level, defaulting to INFO. -->
     <root level="${LOG_LEVEL:-INFO}">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="CONTAINER_STDOUT" />
     </root>
 
 </configuration>

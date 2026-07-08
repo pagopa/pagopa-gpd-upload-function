@@ -19,7 +19,7 @@
   "logging": {
     "fileLoggingMode": "debugOnly",
     "logLevel": {
-      "default": "Information",
+      "default": "None",
       "Function.BlobQueueEventFunction": "Information",
       "Function.BlobQueueEventFunction.User": "Information",
       "Function.PaymentPositionDequeueFunction": "Information",
