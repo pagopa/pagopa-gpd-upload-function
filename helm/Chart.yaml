@@ -2,8 +2,8 @@ apiVersion: v2
 name: pagopa-gpd-upload-function
 description: Microservice description
 type: application
-version: 0.130.0
-appVersion: 0.5.2-14-PIDM-2170-gpd-upload-error
+version: 0.131.0
+appVersion: 0.5.2-15-PIDM-2170-gpd-upload-error
 dependencies:
   - name: microservice-chart
     version: 8.0.2
