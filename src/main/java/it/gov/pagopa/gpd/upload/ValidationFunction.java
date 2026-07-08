@@ -47,11 +47,6 @@ public class ValidationFunction {
     public void run(
             @QueueTrigger(name = "BlobCreatedEventTrigger", queueName = "%BLOB_EVENTS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String events,
             final ExecutionContext context) {
-    	
-    	String invocationId = context.getInvocationId();
-
-        // Temporary probe to verify that SLF4J/Logback ECS logs are emitted to the container stdout.
-        logger.info("[id={}][ValidationFunction] SLF4J_FUNCTION_SMOKE_TEST", invocationId);
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
 
