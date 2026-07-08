@@ -3,12 +3,14 @@ ARG JAVA_VERSION=17
 FROM mcr.microsoft.com/azure-functions/java:4.0-java$JAVA_VERSION-build AS installer-env
 
 COPY . /src/java-function-app
+# Expose Logback configuration as a physical file so the Java worker can load it explicitly.
 RUN cd /src/java-function-app && \
     mkdir -p /home/site/wwwroot && \
     mvn clean package -Dmaven.test.skip=true && \
     cd ./target/azure-functions/ && \
     cd $(ls -d */|head -n 1) && \
-    cp -a . /home/site/wwwroot
+    cp -a . /home/site/wwwroot && \
+    cp /src/java-function-app/target/classes/logback.xml /home/site/wwwroot/logback.xml
 
 # This image is ssh enabled
 FROM mcr.microsoft.com/azure-functions/java:4-java$JAVA_VERSION
