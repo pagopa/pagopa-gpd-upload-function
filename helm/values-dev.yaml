@@ -1,6 +1,6 @@
 microservice-chart:
   namespace: "gps"
-  nameOverride: ""
+  nameOverride: "pagopa-gpd-upload-function"
   fullnameOverride: ""
   image:
     repository: ghcr.io/pagopa/pagopa-gpd-upload-function
