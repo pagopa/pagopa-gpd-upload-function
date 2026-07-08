@@ -47,6 +47,22 @@ public class ValidationFunction {
     public void run(
             @QueueTrigger(name = "BlobCreatedEventTrigger", queueName = "%BLOB_EVENTS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String events,
             final ExecutionContext context) {
+    	
+    	String invocationId = context.getInvocationId();
+
+        // Temporary logging probe to verify which channels are exposed by Azure Functions Java Worker.
+        System.out.println("[id=" + invocationId + "][ValidationFunction] STDOUT_FUNCTION_SMOKE_TEST");
+        System.out.flush();
+
+        // Temporary logging probe to verify whether stderr is exposed by the runtime.
+        System.err.println("[id=" + invocationId + "][ValidationFunction] STDERR_FUNCTION_SMOKE_TEST");
+        System.err.flush();
+
+        // Temporary logging probe to verify the Azure Functions context logger channel.
+        context.getLogger().info("[id=" + invocationId + "][ValidationFunction] CONTEXT_LOGGER_FUNCTION_SMOKE_TEST");
+
+        // Temporary logging probe to verify SLF4J/Logback ECS output inside the real function execution.
+        logger.info("[id={}][ValidationFunction] SLF4J_FUNCTION_SMOKE_TEST", invocationId);
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
 
