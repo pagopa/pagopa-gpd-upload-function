@@ -50,6 +50,8 @@ public class ValidationFunction {
     	
     	String invocationId = context.getInvocationId();
 
+        logSlf4jDiagnostics(context);
+
         // Temporary logging probe to verify which channels are exposed by Azure Functions Java Worker.
         System.out.println("[id=" + invocationId + "][ValidationFunction] STDOUT_FUNCTION_SMOKE_TEST");
         System.out.flush();
@@ -63,6 +65,10 @@ public class ValidationFunction {
 
         // Temporary logging probe to verify SLF4J/Logback ECS output inside the real function execution.
         logger.info("[id={}][ValidationFunction] SLF4J_FUNCTION_SMOKE_TEST", invocationId);
+
+        // Temporary logging probe to verify whether plain JUL logs are exposed by Azure Functions.
+        java.util.logging.Logger.getLogger(ValidationFunction.class.getName())
+                .info("[id=" + invocationId + "][ValidationFunction] JUL_FUNCTION_SMOKE_TEST");
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
 
@@ -150,6 +156,70 @@ public class ValidationFunction {
                 	        context.getInvocationId());
                 }
             }
+        }
+    }
+    
+    private void logSlf4jDiagnostics(ExecutionContext context) {
+        try {
+            org.slf4j.ILoggerFactory factory = LoggerFactory.getILoggerFactory();
+
+            context.getLogger().info("[SLF4J_DIAG] loggerClass=" + logger.getClass().getName());
+            context.getLogger().info("[SLF4J_DIAG] factoryClass=" + factory.getClass().getName());
+            context.getLogger().info("[SLF4J_DIAG] LoggerFactorySource=" + sourceOf(LoggerFactory.class));
+            context.getLogger().info("[SLF4J_DIAG] LoggerApiSource=" + sourceOf(org.slf4j.Logger.class));
+
+            try {
+                context.getLogger().info("[SLF4J_DIAG] LogbackContextSource=" + sourceOf(ch.qos.logback.classic.LoggerContext.class));
+            } catch (Throwable e) {
+                context.getLogger().warning("[SLF4J_DIAG] LogbackContextSource unavailable: " + e.getClass().getName() + " - " + e.getMessage());
+            }
+
+            try {
+                context.getLogger().info("[SLF4J_DIAG] EcsEncoderSource=" + sourceOf(co.elastic.logging.logback.EcsEncoder.class));
+            } catch (Throwable e) {
+                context.getLogger().warning("[SLF4J_DIAG] EcsEncoderSource unavailable: " + e.getClass().getName() + " - " + e.getMessage());
+            }
+
+            if (factory instanceof ch.qos.logback.classic.LoggerContext logbackContext) {
+                ch.qos.logback.classic.Logger rootLogger =
+                        logbackContext.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME);
+
+                context.getLogger().info("[SLF4J_DIAG] rootLevel=" + rootLogger.getLevel()
+                        + ", effectiveLevel=" + rootLogger.getEffectiveLevel());
+
+                java.util.Iterator<ch.qos.logback.core.Appender<ch.qos.logback.classic.spi.ILoggingEvent>> appenders =
+                        rootLogger.iteratorForAppenders();
+
+                while (appenders.hasNext()) {
+                    ch.qos.logback.core.Appender<ch.qos.logback.classic.spi.ILoggingEvent> appender = appenders.next();
+
+                    context.getLogger().info("[SLF4J_DIAG] appenderName=" + appender.getName()
+                            + ", appenderClass=" + appender.getClass().getName());
+
+                    if (appender instanceof ch.qos.logback.core.OutputStreamAppender<?> outputStreamAppender) {
+                        context.getLogger().info("[SLF4J_DIAG] encoderClass="
+                                + outputStreamAppender.getEncoder().getClass().getName());
+                    }
+                }
+
+                for (ch.qos.logback.core.status.Status status : logbackContext.getStatusManager().getCopyOfStatusList()) {
+                    context.getLogger().info("[SLF4J_DIAG] logbackStatus level=" + status.getLevel()
+                            + ", message=" + status.getMessage());
+                }
+            }
+        } catch (Throwable e) {
+            context.getLogger().severe("[SLF4J_DIAG] failed: " + e.getClass().getName() + " - " + e.getMessage());
+        }
+    }
+
+    private static String sourceOf(Class<?> clazz) {
+        try {
+            if (clazz.getProtectionDomain() == null || clazz.getProtectionDomain().getCodeSource() == null) {
+                return "unknown";
+            }
+            return String.valueOf(clazz.getProtectionDomain().getCodeSource().getLocation());
+        } catch (Throwable e) {
+            return "unavailable: " + e.getClass().getName() + " - " + e.getMessage();
         }
     }
 
