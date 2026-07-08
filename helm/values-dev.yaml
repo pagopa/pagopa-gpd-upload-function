@@ -89,6 +89,8 @@ microservice-chart:
     LOG_LEVEL: "INFO"
     # Force the Java worker to load the ECS Logback configuration from an absolute file path.
     languageWorkers__java__arguments: "-Dlogback.configurationFile=/home/site/wwwroot/logback.xml"
+    # Force the ECS Logback configuration on every JVM started in the container.
+    JAVA_TOOL_OPTIONS: "-Dlogback.configurationFile=/home/site/wwwroot/logback.xml"
     WEBSITE_SITE_NAME: "pagopagpduploadfunction" # required to show cloud role name in application insights
     FUNCTIONS_WORKER_RUNTIME: "java"
     ASPNETCORE_URLS: "http://*:8080"
