@@ -44,11 +44,12 @@ public class Info {
 		String name = null;
 		try {
 			Properties properties = new Properties();
-			InputStream inputStream = getResourceAsStream(path);
-			if (inputStream != null) {
-				properties.load(inputStream);
-				version = properties.getProperty("version", null);
-				name = properties.getProperty("artifactId", null);
+			try (InputStream inputStream = getResourceAsStream(path)) {
+			    if (inputStream != null) {
+			        properties.load(inputStream);
+			        version = properties.getProperty("version", null);
+			        name = properties.getProperty("artifactId", null);
+			    }
 			}
 		} catch (Exception e) {
 			log.error("[Info] Impossible to retrieve information from pom.properties file.", e);

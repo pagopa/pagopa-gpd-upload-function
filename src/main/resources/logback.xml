@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <property resource="application.properties" />
+    <property resource="build.properties" />
 
     <!-- Emit application logs as ECS JSON directly to the container stdout. -->
     <appender name="CONTAINER_STDOUT" class="ch.qos.logback.core.FileAppender">
