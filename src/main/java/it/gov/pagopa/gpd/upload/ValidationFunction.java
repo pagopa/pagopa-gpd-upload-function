@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload;
 
+import com.microsoft.azure.functions.HttpStatus;
 import com.azure.core.implementation.serializer.DefaultJsonSerializer;
 import com.azure.core.util.BinaryData;
 import com.azure.messaging.eventgrid.EventGridEvent;
@@ -81,15 +82,16 @@ public class ValidationFunction {
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
                     	logger.warn(LOG_PREFIX + " Upload already in progress for event subject: {}",
                     	        context.getInvocationId(), "-", event.getSubject());
-                        return; // skip event
+                    	continue; // skip only the locked event
                     }
                     
                     if (blobData.getContentLength() == 0) {
                     	logger.error(LOG_PREFIX + " Blob content length is zero. Upload will be marked as failed and skipped.",
                     	        context.getInvocationId(), key);
 
-                        this.failUpload(context, broker, fiscalCode, key,
-                                "Input blob content length is zero");
+                    	this.failUpload(context, broker, fiscalCode, key,
+                    	        HttpStatus.BAD_REQUEST,
+                    	        "Input blob content length is zero");
 
                         IdempotencyUploadTracker.unlock(subject);
                         continue;
@@ -106,7 +108,9 @@ public class ValidationFunction {
                         logger.error(LOG_PREFIX + " {}. Upload will be marked as failed and skipped.",
                                 context.getInvocationId(), key, failureMessage);
 
-                        this.failUpload(context, broker, fiscalCode, key, failureMessage);
+                        this.failUpload(context, broker, fiscalCode, key,
+                                HttpStatus.PAYLOAD_TOO_LARGE,
+                                failureMessage);
 
                         IdempotencyUploadTracker.unlock(subject);
                         continue;
@@ -227,8 +231,15 @@ public class ValidationFunction {
         };
     }
     
-    public boolean failUpload(ExecutionContext ctx, String broker, String fiscalCode, String uploadKey, String failureMessage) {
+    public boolean failUpload(
+            ExecutionContext ctx,
+            String broker,
+            String fiscalCode,
+            String uploadKey,
+            HttpStatus failureStatus,
+            String failureMessage) {
+
         return StatusService.getInstance()
-                .failStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, failureMessage);
+                .failStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, failureStatus, failureMessage);
     }
 }

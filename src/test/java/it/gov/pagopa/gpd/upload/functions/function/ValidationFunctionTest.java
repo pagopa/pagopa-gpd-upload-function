@@ -4,6 +4,8 @@ import com.azure.core.util.BinaryData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.microsoft.azure.functions.ExecutionContext;
+import com.microsoft.azure.functions.HttpStatus;
+
 import it.gov.pagopa.gpd.upload.ValidationFunction;
 import it.gov.pagopa.gpd.upload.exception.AppException;
 import it.gov.pagopa.gpd.upload.model.CRUDOperation;
@@ -69,57 +71,73 @@ class ValidationFunctionTest {
     @Test
     void runSizeTooLarge() throws AppException {
     	when(context.getLogger()).thenReturn(mockLogger);
-        when(context.getInvocationId()).thenReturn("testInvocationId");
+    	when(context.getInvocationId()).thenReturn("testInvocationId");
 
-        String event = getMockBlobCreatedEventSize("10e+8");
+    	String event = getMockBlobCreatedEventSize("10e+8");
 
-        doReturn(true).when(validationFunction)
-                .failUpload(eq(context), anyString(), anyString(), anyString(), contains("exceeds the maximum allowed threshold"));
+    	doReturn(true).when(validationFunction)
+    	.failUpload(
+    			eq(context),
+    			anyString(),
+    			anyString(),
+    			anyString(),
+    			eq(HttpStatus.PAYLOAD_TOO_LARGE),
+    			contains("exceeds the maximum allowed threshold")
+    			);
 
-        validationFunction.run(event, context);
+    	validationFunction.run(event, context);
 
-        verify(validationFunction, times(1))
-        .failUpload(
-                eq(context),
-                eq("broker0001"),
-                eq("ec0001"),
-                eq("77777777777f3d1"),
-                contains("exceeds the maximum allowed threshold")
-        );
+    	verify(validationFunction, times(1))
+    	.failUpload(
+    			eq(context),
+    			eq("broker0001"),
+    			eq("ec0001"),
+    			eq("77777777777f3d1"),
+    			eq(HttpStatus.PAYLOAD_TOO_LARGE),
+    			contains("exceeds the maximum allowed threshold")
+    			);
 
-        verify(validationFunction, never())
-                .downloadBlob(any(), any(), any());
+    	verify(validationFunction, never())
+    	.downloadBlob(any(), any(), any());
 
-        verify(validationFunction, never())
-                .validateBlob(any(), any(), any(), any(), any(), any());
+    	verify(validationFunction, never())
+    	.validateBlob(any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void runSizeZero() throws AppException  {
     	when(context.getLogger()).thenReturn(mockLogger);
-        when(context.getInvocationId()).thenReturn("testInvocationId");
+    	when(context.getInvocationId()).thenReturn("testInvocationId");
 
-        String event = getMockBlobCreatedEventSize("0");
+    	String event = getMockBlobCreatedEventSize("0");
 
-        doReturn(true).when(validationFunction)
-                .failUpload(eq(context), anyString(), anyString(), anyString(), contains("content length is zero"));
+    	doReturn(true).when(validationFunction)
+    	.failUpload(
+    			eq(context),
+    			anyString(),
+    			anyString(),
+    			anyString(),
+    			eq(HttpStatus.BAD_REQUEST),
+    			contains("content length is zero")
+    			);
 
-        validationFunction.run(event, context);
+    	validationFunction.run(event, context);
 
-        verify(validationFunction, times(1))
-        .failUpload(
-                eq(context),
-                eq("broker0001"),
-                eq("ec0001"),
-                eq("77777777777f3d1"),
-                contains("content length is zero")
-        );
+    	verify(validationFunction, times(1))
+    	.failUpload(
+    			eq(context),
+    			eq("broker0001"),
+    			eq("ec0001"),
+    			eq("77777777777f3d1"),
+    			eq(HttpStatus.BAD_REQUEST),
+    			contains("content length is zero")
+    			);
 
-        verify(validationFunction, never())
-                .downloadBlob(any(), any(), any());
+    	verify(validationFunction, never())
+    	.downloadBlob(any(), any(), any());
 
-        verify(validationFunction, never())
-                .validateBlob(any(), any(), any(), any(), any(), any());
+    	verify(validationFunction, never())
+    	.validateBlob(any(), any(), any(), any(), any(), any());
     }
 
     @Test

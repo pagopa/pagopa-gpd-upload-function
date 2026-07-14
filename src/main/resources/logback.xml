@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <property resource="application.properties" />
+    <property resource="build.properties" />
 
     <!-- Emit application logs as ECS JSON directly to the container stdout. -->
+    <!--
     <appender name="CONTAINER_STDOUT" class="ch.qos.logback.core.FileAppender">
         <file>/proc/1/fd/1</file>
         <append>true</append>
@@ -13,6 +14,14 @@
             <serviceVersion>${version:-unknown}</serviceVersion>
             <serviceEnvironment>${ENV:-unknown}</serviceEnvironment>
         </encoder>
+    </appender>
+    -->
+    <appender name="CONTAINER_STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="co.elastic.logging.logback.EcsEncoder">
+        <serviceName>${SERVICE_NAME:-pagopa-gpd-upload-function}</serviceName>
+        <serviceVersion>${version:-unknown}</serviceVersion>
+        <serviceEnvironment>${ENV:-unknown}</serviceEnvironment>
+      </encoder>
     </appender>
 
     <!-- Reduce noisy logs from test and infrastructure libraries. -->

@@ -66,14 +66,18 @@ public class StatusService {
     }
     
     public synchronized boolean failStatus(String invocationId, String broker, String fiscalCode, String key, String failureMessage) {
+        return failStatus(invocationId, broker, fiscalCode, key, HttpStatus.PAYLOAD_TOO_LARGE, failureMessage);
+    }
+
+    public synchronized boolean failStatus(String invocationId, String broker, String fiscalCode, String key, HttpStatus failureStatus, String failureMessage) {
         try {
             // get previous status to update.
             Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
 
             if (status == null) {
-            	log.error("[id={}][StatusService] Upload status not found for broker={}, key={} and fiscalCode={}. " +
-                        "A fallback failed status will be created.",
-                invocationId, broker, key, fiscalCode);
+                log.error("[id={}][StatusService] Upload status not found for broker={}, key={} and fiscalCode={}. " +
+                                "A fallback failed status will be created.",
+                        invocationId, broker, key, fiscalCode);
 
                 status = buildFallbackFailedStatus(broker, fiscalCode, key);
             }
@@ -91,9 +95,11 @@ public class StatusService {
                 status.upload.setResponses(new ArrayList<>());
             }
 
+            int statusCode = failureStatus.value();
+
             status.upload.getResponses().add(ResponseEntry.builder()
-            		.statusCode(HttpStatus.PAYLOAD_TOO_LARGE.value()) // HTTP 413 "Content Too Large"
-                    .statusMessage(HttpStatus.PAYLOAD_TOO_LARGE.value() + "-" + failureMessage)
+                    .statusCode(statusCode)
+                    .statusMessage(statusCode + "-" + failureMessage)
                     .requestIDs(List.of())
                     .build());
 
@@ -103,8 +109,8 @@ public class StatusService {
             return true;
 
         } catch (AppException e) {
-        	log.error("[id={}][StatusService] Error while marking upload {} as failed",
-        	        invocationId, key, e);
+            log.error("[id={}][StatusService] Error while marking upload {} as failed",
+                    invocationId, key, e);
             return false;
         }
     }
