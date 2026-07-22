@@ -47,7 +47,7 @@ public class StatusService {
                 .build();
         Status status = getStatusRepository().createIfNotExist(invocationId, key, fiscalCode, statusIfNotExist);
         if (status.upload.getEnd() != null) {
-        	log.error("[id={}][StatusService] Upload already processed. Upload finished at: {}",
+        	log.warn("[id={}][StatusService] Upload already processed. Upload finished at: {}",
         	        invocationId, status.upload.getEnd());
             return status;
         }
@@ -119,8 +119,8 @@ public class StatusService {
         try {
             Status status = getStatusRepository().getStatus(invocationId, key, fiscalCode);
             for (ResponseEntry entry : entries) {
-            	log.error("[id={}][StatusService] Add response {}",
-            	        invocationId, entry.getStatusMessage());
+            	log.debug("[id={}][StatusService] Adding response with statusCode={}",
+            	        invocationId, entry.getStatusCode());
 
                 status.upload.addResponse(entry);
             }

@@ -32,41 +32,55 @@ public class GPDClient {
 
     public ResponseGPD createDebtPosition(RequestGPD req) {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
-        return CRUD_GPD(HttpMethod.POST, path, req);
+        return crudGpd(HttpMethod.POST, path, req);
     }
 
     public ResponseGPD updateDebtPosition(RequestGPD req) {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
-        return CRUD_GPD(HttpMethod.PUT, path, req);
+        return crudGpd(HttpMethod.PUT, path, req);
     }
 
     public ResponseGPD deleteDebtPosition(RequestGPD req) {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
-        return CRUD_GPD(HttpMethod.DELETE, path, req);
+        return crudGpd(HttpMethod.DELETE, path, req);
     }
     
-    private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
+    private ResponseGPD crudGpd(HttpMethod method, String path, RequestGPD req) {
         Response response = null;
         try {
             response = callGPD(method.name(), path, req.getBody());
+
+            if (response == null) {
+                log.warn("[GPDClient][{}] GPD call returned a null response", method.name());
+                return buildInternalServerErrorResponse();
+            }
+
             return mapResponse(response);
         } catch (RuntimeException e) {
             // Log and prudential fallback: RETRY with 500 + standard message
-        	log.warn("[GPDClient][{}] Unexpected runtime error while calling GPD",
-        	        method.name(), e);
+            log.warn("[GPDClient][{}] Unexpected runtime error while calling GPD",
+                    method.name(), e);
 
-            return ResponseGPD.builder()
-                    .retryStep(RetryStep.RETRY)
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                    .detail(formatStatusAndMessage(
-                            HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                            MapUtils.getDetail(HttpStatus.INTERNAL_SERVER_ERROR)))
-                    .build();
+            return buildInternalServerErrorResponse();
         } finally {
             if (response != null) {
-                try { response.close(); } catch (Exception ignore) { /* no-op */ }
+                try {
+                    response.close();
+                } catch (Exception e) {
+                    log.warn("[GPDClient][{}] Error while closing GPD response", method.name(), e);
+                }
             }
         }
+    }
+    
+    private ResponseGPD buildInternalServerErrorResponse() {
+        return ResponseGPD.builder()
+                .retryStep(RetryStep.RETRY)
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .detail(formatStatusAndMessage(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        MapUtils.getDetail(HttpStatus.INTERNAL_SERVER_ERROR)))
+                .build();
     }
 
 

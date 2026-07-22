@@ -56,12 +56,10 @@ public class ValidationFunction {
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
-            	logger.info(LOG_PREFIX + " Call event type {} handler.",
-            	        context.getInvocationId(), "-", event.getEventType());
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
 
-                logger.info(LOG_PREFIX + " Blob event subject: {}",
+                logger.debug(LOG_PREFIX + " Blob event subject: {}",
                         context.getInvocationId(), "-", event.getSubject());
 
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-\\h]+\\.[Jj][Ss][Oo][Nn])");
@@ -120,7 +118,7 @@ public class ValidationFunction {
                     BinaryData content = (BinaryData) responseDownload.get(BLOB_KEY);
                     ServiceType serviceType = (ServiceType) responseDownload.get(SERVICE_TYPE_KEY);
 
-                    logger.info(LOG_PREFIX + " broker: {}, fiscalCode: {}, filename: {}",
+                    logger.debug(LOG_PREFIX + " Blob metadata resolved. broker={}, fiscalCode={}, filename={}",
                             context.getInvocationId(), key, broker, fiscalCode, filename);
                     try {
                         if (!this.validateBlob(context, broker, fiscalCode, key, content, serviceType))
