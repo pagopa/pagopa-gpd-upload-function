@@ -20,14 +20,11 @@ import it.gov.pagopa.gpd.upload.service.CRUDService;
 import it.gov.pagopa.gpd.upload.service.StatusService;
 import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -47,24 +44,11 @@ class ServiceFunctionTest {
     ServiceFunction serviceFunction;
     @Mock
     GPDClient gpdClient;
+    @Mock
+    BlobRepository blobRepository;
 
-    private Logger mockLogger;
-    private MockedStatic<BlobRepository> mockedStaticBlobRepository;
-    private final ExecutionContext context = Mockito.mock(ExecutionContext.class);
+    private final ExecutionContext context = mock(ExecutionContext.class);
 
-    @BeforeEach
-    void setUp() {
-        mockLogger = mock(Logger.class);
-        // mock BlobRepository
-        BlobRepository mockBlobRepository = mock(BlobRepository.class);
-        mockedStaticBlobRepository = mockStatic(BlobRepository.class);
-        mockedStaticBlobRepository.when(() -> BlobRepository.getInstance(mockLogger)).thenReturn(mockBlobRepository);
-    }
-
-    @AfterEach
-    void tearDown() {
-        mockedStaticBlobRepository.close();
-    }
 
     @Test
     void runBulkCreateOK() throws Exception {
@@ -77,7 +61,7 @@ class ServiceFunctionTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
         //doReturn(statusService).when(serviceFunction).getStatusService(any());
-        doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
+        doReturn(gpdClient).when(serviceFunction).getGPDClient();
         //doReturn(getOKMockResponseGPD()).when(gpdClient).createDebtPosition(any());
         //doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
         //doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
@@ -99,7 +83,7 @@ class ServiceFunctionTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
         //doReturn(statusService).when(serviceFunction).getStatusService(any());
-        doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
+        doReturn(gpdClient).when(serviceFunction).getGPDClient();
         //doReturn(getKOMockResponseGPD()).when(gpdClient).createDebtPosition(any());
         //doNothing().when(statusService).appendResponses(any(), any(), any(), any());
         // todo doNothing().when(serviceFunction).retry(any(), any(), any());
@@ -123,7 +107,7 @@ class ServiceFunctionTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
         //doReturn(statusService).when(serviceFunction).getStatusService(any());
-        doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
+        doReturn(gpdClient).when(serviceFunction).getGPDClient();
         //doReturn(getOKMockResponseGPD()).when(gpdClient).updateDebtPosition(any());
         //doReturn(getMockStatus()).when(statusService).updateStatusEndTime(any(), any(), any(), any());
         //doReturn(getMockStatus()).when(statusService).getStatus(any(), any(), any());
@@ -145,7 +129,7 @@ class ServiceFunctionTest {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.INDENT_OUTPUT);
         //doReturn(statusService).when(serviceFunction).getStatusService(any());
-        doReturn(gpdClient).when(serviceFunction).getGPDClient(context);
+        doReturn(gpdClient).when(serviceFunction).getGPDClient();
         //doReturn(getKOMockResponseGPD()).when(gpdClient).updateDebtPosition(any());
         //doNothing().when(statusService).appendResponses(any(), any(), any(), any());
         // todo doNothing().when(serviceFunction).retry(any(), any(), any());
@@ -157,29 +141,33 @@ class ServiceFunctionTest {
         //Assertion
         assertTrue(true);
     }
-
+    
     @Test
     void runReport() throws AppException, JsonProcessingException {
         Status status = Status.builder()
-                                .id("upload-id")
-                                .brokerID("broker-id")
-                                .fiscalCode("ec-fiscal-code")
-                                .upload(Upload.builder()
-                                                .current(10)
-                                                .total(10)
-                                                .start(LocalDateTime.now())
-                                                .end(LocalDateTime.now())
-                                                .responses(new ArrayList<>())
-                                                .build())
-                                .build();
-        // BlobRepository mocked false by default
-        Assertions.assertFalse(serviceFunction.generateReport(mockLogger, "key", status));
+                .id("upload-id")
+                .brokerID("broker-id")
+                .fiscalCode("ec-fiscal-code")
+                .upload(Upload.builder()
+                        .current(10)
+                        .total(10)
+                        .start(LocalDateTime.now())
+                        .end(LocalDateTime.now())
+                        .responses(new ArrayList<>())
+                        .build())
+                .build();
+        
+        doReturn(blobRepository).when(serviceFunction).getBlobRepository();
+
+        doReturn(false).when(blobRepository)
+                .uploadReport(anyString(), anyString(), anyString(), anyString(), any());
+        
+        Assertions.assertFalse(serviceFunction.generateReport("key", status));
     }
     
     @Test
     void runUnlocksIdempotencyKeyWhenUploadCompletes() throws Exception {
         ExecutionContext mockContext = mock(ExecutionContext.class);
-        when(mockContext.getLogger()).thenReturn(mockLogger);
         when(mockContext.getInvocationId()).thenReturn("testInvocationId");
 
         QueueMessage message = new QueueMessage();
@@ -201,7 +189,7 @@ class ServiceFunctionTest {
             mockStatus.upload.setCurrent(5);
             mockStatus.upload.setTotal(5);
 
-            mockedStatusService.when(() -> StatusService.getInstance(mockLogger)).thenReturn(mockStatusService);
+            mockedStatusService.when(StatusService::getInstance).thenReturn(mockStatusService);
             when(mockStatusService.getStatus("testInvocationId", "org123", "uploadKey123")).thenReturn(mockStatus);
 
             when(mockStatusService.updateStatusEndTime(eq("org123"), eq("uploadKey123"), any())).thenReturn(false);
@@ -215,7 +203,7 @@ class ServiceFunctionTest {
            
             doReturn(dummyFunction).when(serviceFunction).getMethod(any(), any());
             doReturn(mock(CRUDService.class)).when(serviceFunction).getOperationService(any(), any(), any());
-            doReturn(mock(GPDClient.class)).when(serviceFunction).getGPDClient(any());
+            doReturn(mock(GPDClient.class)).when(serviceFunction).getGPDClient();
             doReturn(mock(UpsertMessage.class)).when(serviceFunction).getPositionMessage(any());
 
             serviceFunction.run(messageJson, mockContext);

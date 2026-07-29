@@ -13,32 +13,35 @@ import reactor.util.retry.RetryBackoffSpec;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StatusRepository {
+	private static final Logger log = LoggerFactory.getLogger(StatusRepository.class);
+    private static final String LOG_PREFIX = "[id={}][StatusRepository]";
+
     private static volatile StatusRepository instance;
+
     private final String cosmosURI = System.getenv("COSMOS_URI");
     private final String cosmosKey = System.getenv("COSMOS_KEY");
     private final String databaseName = System.getenv("GPD_DB_NAME");
     private final String containerName = System.getenv("GPD_CONTAINER_NAME");
-    private CosmosContainer container;
-    ThrottlingRetryOptions throttlingRetryOptions = new ThrottlingRetryOptions();
-    private final Logger logger;
 
-    public static StatusRepository getInstance(Logger logger) {
+    private CosmosContainer container;
+    private final ThrottlingRetryOptions throttlingRetryOptions = new ThrottlingRetryOptions();
+
+    public static StatusRepository getInstance() {
         if (instance == null) {
             synchronized (StatusRepository.class) {
                 if (instance == null) {
-                    instance = new StatusRepository(logger);
+                    instance = new StatusRepository();
                 }
             }
         }
         return instance;
     }
 
-    private StatusRepository(Logger logger) {
-        this.logger = logger;
+    private StatusRepository() {
         this.initCosmosClient();
     }
 
@@ -58,16 +61,19 @@ public class StatusRepository {
     public synchronized Status createIfNotExist(String invocationId, String statusId, String partitionKey, Status statusIfNotExist) throws AppException {
         try {
             CosmosItemResponse<Status> response = container.readItem(statusId, new PartitionKey(partitionKey), Status.class);
-            logger.log(Level.INFO, () -> String.format("[id=%s][StatusRepository] Item with ID %s already exists. Skipping creation.", invocationId, statusId));
+            log.info(LOG_PREFIX + " Item with ID {} already exists. Skipping creation.",
+                    invocationId, statusId);
             return response.getItem();
         } catch (CosmosException ex) {
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND.value()) {
-                logger.log(Level.INFO, () -> String.format("[id=%s][StatusRepository] Item with ID %s doesn't exist. It will be created.", invocationId, statusId));
+            	log.info(LOG_PREFIX + " Item with ID {} doesn't exist. It will be created.",
+            	        invocationId, statusId);
                 this.upsertStatus(invocationId, statusIfNotExist.id, statusIfNotExist);
                 return statusIfNotExist;
             } else {
-                logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while create status item, code: %s", invocationId, ex.getStatusCode()));
-                throw new AppException("Error " + ex.getStatusCode() + " while reading Status item: " + statusId);
+            	log.error(LOG_PREFIX + " Error while creating status item {}, code {}",
+            	        invocationId, statusId, ex.getStatusCode(), ex);
+            	throw new AppException("Error " + ex.getStatusCode() + " while reading Status item: " + statusId);
             }
         }
     }
@@ -75,15 +81,18 @@ public class StatusRepository {
     public synchronized Status getStatus(String invocationId, String id, String partitionKey) throws AppException {
         try {
             CosmosItemResponse<Status> response = container.readItem(id, new PartitionKey(partitionKey), Status.class);
-            logger.log(Level.INFO, () -> String.format("Read Status document with id %s response: %s", id, response.getStatusCode()));
+            log.info(LOG_PREFIX + " Read Status document with id {} response: {}",
+                    invocationId, id, response.getStatusCode());
             return response.getItem();
         } catch (CosmosException ex) {
             if (ex.getStatusCode() == HttpStatus.NOT_FOUND.value()) {
-                logger.log(Level.INFO, () -> String.format("Read Status document with id %s not found", id));
+            	log.info(LOG_PREFIX + " Read Status document with id {} not found",
+            	        invocationId, id);
                 return null;
             } else {
-                logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while reading status item, code: %s", invocationId, ex.getStatusCode()));
-                throw new AppException("Error " + ex.getStatusCode() + " while reading Status item: " + id);
+            	log.error(LOG_PREFIX + " Error while reading status item {}, code {}",
+            	        invocationId, id, ex.getStatusCode(), ex);
+            	throw new AppException("Error " + ex.getStatusCode() + " while reading Status item: " + id);
             }
         }
     }
@@ -92,12 +101,14 @@ public class StatusRepository {
         try {
             CosmosItemResponse<Status> response = container.upsertItem(status, new CosmosItemRequestOptions());
             if(response.getStatusCode() < 200 || response.getStatusCode() > 299) {
-                logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while upsert status item, code: %s", invocationId, response.getStatusCode()));
+            	log.error(LOG_PREFIX + " Error while upserting status item {}, code {}",
+            	        invocationId, id, response.getStatusCode());
                 throw new AppException("Error while upsert Status item " + id);
             }
         } catch (CosmosException e) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][StatusRepository] Error while upsert status item, code: %s, message: %s", invocationId, e.getStatusCode(), e.getMessage()));
-            throw new AppException("Error while upsert Status item " + id);
+        	log.error(LOG_PREFIX + " Error while upserting status item {}, code {}, message {}",
+        	        invocationId, id, e.getStatusCode(), e.getMessage(), e);
+        	throw new AppException("Error while upsert Status item " + id);
         }
     }
 
@@ -120,9 +131,11 @@ public class StatusRepository {
                        .maxBackoff(Duration.ofSeconds(30))
                        .filter(throwable -> throwable instanceof com.azure.cosmos.CosmosException &&
                                                     ((com.azure.cosmos.CosmosException) throwable).getStatusCode() == 429)
-                       .doBeforeRetry(retrySignal -> {
-                           Logger.getLogger ("Retry", "Retry attempt #" + (retrySignal.totalRetries() + 1) +
-                                                              " after " + retrySignal.totalRetries() + " due to " + retrySignal.failure().getMessage());
-                       });
+                       .doBeforeRetry(retrySignal ->
+                       log.warn("[StatusRepository] Retry attempt #{} after {} retries due to {}",
+                               retrySignal.totalRetries() + 1,
+                               retrySignal.totalRetries(),
+                               retrySignal.failure().getMessage())
+                       );
     }
 }

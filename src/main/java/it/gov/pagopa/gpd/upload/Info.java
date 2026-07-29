@@ -13,10 +13,12 @@ import it.gov.pagopa.gpd.upload.model.AppInfo;
 import java.io.InputStream;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /** Azure Functions with Azure Http trigger. */
 public class Info {
+	private static final Logger log = LoggerFactory.getLogger(Info.class);
 
 	/**
 	 * This function will be invoked when a Http Trigger occurs
@@ -33,24 +35,29 @@ public class Info {
 
 		return request.createResponseBuilder(HttpStatus.OK)
 					   .header("Content-Type", "application/json")
-					   .body(getInfo(context.getLogger(), "/maven-archiver/pom.properties"))
+					   .body(getInfo("/maven-archiver/pom.properties"))
 					   .build();
 	}
 
-	public synchronized AppInfo getInfo(Logger logger, String path) {
+	public synchronized AppInfo getInfo(String path) {
 		String version = null;
 		String name = null;
 		try {
 			Properties properties = new Properties();
-			InputStream inputStream = getClass().getResourceAsStream(path);
-			if (inputStream != null) {
-				properties.load(inputStream);
-				version = properties.getProperty("version", null);
-				name = properties.getProperty("artifactId", null);
+			try (InputStream inputStream = getResourceAsStream(path)) {
+			    if (inputStream != null) {
+			        properties.load(inputStream);
+			        version = properties.getProperty("version", null);
+			        name = properties.getProperty("artifactId", null);
+			    }
 			}
 		} catch (Exception e) {
-			logger.severe("Impossible to retrieve information from pom.properties file.");
+			log.error("[Info] Impossible to retrieve information from pom.properties file.", e);
 		}
 		return AppInfo.builder().version(version).environment("azure-fn").name(name).build();
+	}
+	
+	protected InputStream getResourceAsStream(String path) {
+	    return getClass().getResourceAsStream(path);
 	}
 }

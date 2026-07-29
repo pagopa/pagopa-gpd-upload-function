@@ -1,5 +1,6 @@
 package it.gov.pagopa.gpd.upload;
 
+import com.microsoft.azure.functions.HttpStatus;
 import com.azure.core.implementation.serializer.DefaultJsonSerializer;
 import com.azure.core.util.BinaryData;
 import com.azure.messaging.eventgrid.EventGridEvent;
@@ -13,7 +14,6 @@ import com.microsoft.azure.functions.annotation.FunctionName;
 import com.microsoft.azure.functions.annotation.QueueTrigger;
 import it.gov.pagopa.gpd.upload.entity.Status;
 import it.gov.pagopa.gpd.upload.exception.AppException;
-import it.gov.pagopa.gpd.upload.model.CRUDOperation;
 import it.gov.pagopa.gpd.upload.model.QueueMessage;
 import it.gov.pagopa.gpd.upload.model.UploadInput;
 import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
@@ -27,8 +27,8 @@ import it.gov.pagopa.gpd.upload.util.IdempotencyUploadTracker;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,14 +40,14 @@ import static it.gov.pagopa.gpd.upload.util.Constants.SERVICE_TYPE_KEY;
  * Validation step act as a filter and is followed by the queuing step
  */
 public class ValidationFunction {
-    private static final String LOG_PREFIX = "[id=%s][upload=%s][ValidationFunction]:";
+	private static final String LOG_PREFIX = "[id={}][upload={}][ValidationFunction]:";
+	private static final Logger logger = LoggerFactory.getLogger(ValidationFunction.class);
+    private static final long MAX_BLOB_CONTENT_LENGTH_BYTES = 100_000_000L;
 
     @FunctionName("BlobQueueEventFunction")
     public void run(
             @QueueTrigger(name = "BlobCreatedEventTrigger", queueName = "%BLOB_EVENTS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String events,
             final ExecutionContext context) {
-
-        Logger logger = context.getLogger();
 
         List<EventGridEvent> eventGridEvents = EventGridEvent.fromString(events);
 
@@ -56,19 +56,11 @@ public class ValidationFunction {
 
         for (EventGridEvent event : eventGridEvents) {
             if (event.getEventType().equals("Microsoft.Storage.BlobCreated")) {
-                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Call event type %s handler.", context.getInvocationId(), "-", event.getEventType()));
 
                 StorageBlobCreatedEventData blobData = event.getData().toObject(StorageBlobCreatedEventData.class, new DefaultJsonSerializer());
-                if (blobData.getContentLength() > 1e+8) { // if file greater than 100 MB
-                    logger.log(Level.INFO, () -> "File size too large");
-                    return; // skip event
-                }
-                if (blobData.getContentLength() == 0) {
-                    logger.log(Level.INFO, () -> "File size equal to zero");
-                    return; // skip event
-                }
 
-                logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "Blob event subject: %s", context.getInvocationId(), "-", event.getSubject()));
+                logger.debug(LOG_PREFIX + " Blob event subject: {}",
+                        context.getInvocationId(), "-", event.getSubject());
 
                 Pattern pattern = Pattern.compile("/containers/(\\w+)/blobs/(\\w+)/input/([\\w\\-\\h]+\\.[Jj][Ss][Oo][Nn])");
                 Matcher matcher = pattern.matcher(event.getSubject());
@@ -86,28 +78,62 @@ public class ValidationFunction {
                     subject = String.format(subjectFormat,
                             broker, fiscalCode, key);
                     if (!IdempotencyUploadTracker.tryLock(subject)) {
-                        logger.log(Level.WARNING, () -> String.format(LOG_PREFIX + "Upload already in progress for event subject: %s", context.getInvocationId(), "-", event.getSubject()));
-                        return; // skip event
+                    	logger.warn(LOG_PREFIX + " Upload already in progress for event subject: {}",
+                    	        context.getInvocationId(), "-", event.getSubject());
+                    	continue; // skip only the locked event
+                    }
+                    
+                    if (blobData.getContentLength() == 0) {
+                    	logger.error(LOG_PREFIX + " Blob content length is zero. Upload will be marked as failed and skipped.",
+                    	        context.getInvocationId(), key);
+
+                    	this.failUpload(context, broker, fiscalCode, key,
+                    	        HttpStatus.BAD_REQUEST,
+                    	        "Input blob content length is zero");
+
+                        IdempotencyUploadTracker.unlock(subject);
+                        continue;
                     }
 
-                    Map<String, Object> responseDownload = this.downloadBlob(context, broker, fiscalCode, filename);
+                    // Mark the upload as failed to avoid leaving it stuck with processedItem = 0.
+                    if (blobData.getContentLength() > MAX_BLOB_CONTENT_LENGTH_BYTES) {
+                        String failureMessage = String.format(
+                                "Input blob size %s bytes exceeds the maximum allowed threshold of %s bytes",
+                                blobData.getContentLength(),
+                                MAX_BLOB_CONTENT_LENGTH_BYTES
+                        );
+
+                        logger.error(LOG_PREFIX + " {}. Upload will be marked as failed and skipped.",
+                                context.getInvocationId(), key, failureMessage);
+
+                        this.failUpload(context, broker, fiscalCode, key,
+                                HttpStatus.PAYLOAD_TOO_LARGE,
+                                failureMessage);
+
+                        IdempotencyUploadTracker.unlock(subject);
+                        continue;
+                    }
+
+                    Map<String, Object> responseDownload = this.downloadBlob(broker, fiscalCode, filename);
                     BinaryData content = (BinaryData) responseDownload.get(BLOB_KEY);
                     ServiceType serviceType = (ServiceType) responseDownload.get(SERVICE_TYPE_KEY);
 
-                    logger.log(Level.INFO, () -> String.format(LOG_PREFIX + "broker: %s, fiscalCode: %s, filename: %s",
-                            context.getInvocationId(), key, broker, fiscalCode, filename));
+                    logger.debug(LOG_PREFIX + " Blob metadata resolved. broker={}, fiscalCode={}, filename={}",
+                            context.getInvocationId(), key, broker, fiscalCode, filename);
                     try {
                         if (!this.validateBlob(context, broker, fiscalCode, key, content, serviceType))
                             throw new AppException("Invalid blob");
                     } catch (AppException e) {
-                        logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] Exception %s", context.getInvocationId(), e.getMessage()));
+                    	logger.error("[id={}][ValidationFunction] Exception while validating blob",
+                    	        context.getInvocationId(), e);
                         // Unlock idempotency key
                         IdempotencyUploadTracker.unlock(subject);
                     }
 
                     Runtime.getRuntime().gc();
                 } else {
-                    logger.log(Level.SEVERE, () -> String.format("[id=%s][ValidationFunction] No match found in the input string.", context.getInvocationId()));
+                	logger.error("[id={}][ValidationFunction] No match found in the input string.",
+                	        context.getInvocationId());
                 }
             }
         }
@@ -143,30 +169,75 @@ public class ValidationFunction {
             }
 
             // enqueue chunk and other input to form message
-            return enqueue(ctx, om, input.getOperation(), pps, iupds, uploadKey, fiscalCode, broker, serviceType);
+            return enqueue(ctx, om, input, uploadKey, fiscalCode, broker, serviceType);
         } catch (JsonProcessingException e) {
-            ctx.getLogger().log(Level.SEVERE, () -> String.format(LOG_PREFIX + "Processing function JsonMappingException: %s, caused by: %s",
-                    ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause()));
-            StatusService.getInstance(ctx.getLogger()).updateStatusEndTime(fiscalCode, uploadKey, LocalDateTime.now());
+        	logger.error(LOG_PREFIX + " Processing function JsonMappingException: {}, caused by: {}",
+        	        ctx.getInvocationId(), uploadKey, e.getMessage(), e.getCause());
+            StatusService.getInstance().updateStatusEndTime(fiscalCode, uploadKey, LocalDateTime.now());
             return false;
         }
     }
 
-    public Map<String, Object> downloadBlob(ExecutionContext ctx, String broker, String fiscalCode, String filename) {
-        return BlobRepository.getInstance(ctx.getLogger()).download(broker, fiscalCode, filename);
+    public Map<String, Object> downloadBlob(String broker, String fiscalCode, String filename) {
+    	return new BlobRepository().download(broker, fiscalCode, filename);
+    }
+    
+    public QueueService getQueueService() {
+        return new QueueService();
     }
 
     public Status createStatus(ExecutionContext ctx, String broker, String orgFiscalCode, String uploadKey, int size, ServiceType serviceType) throws AppException {
-        return StatusService.getInstance(ctx.getLogger())
+        return StatusService.getInstance()
                 .createStatus(ctx.getInvocationId(), broker, orgFiscalCode, uploadKey, size, serviceType);
     }
 
-    public boolean enqueue(ExecutionContext ctx, ObjectMapper om, CRUDOperation operation, List<PaymentPosition> paymentPositions, List<String> IUPDList, String uploadKey, String fiscalCode, String broker, ServiceType serviceType) {
-        QueueService queueService = QueueService.getInstance(ctx.getLogger());
-        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(operation, uploadKey, fiscalCode, broker, serviceType);
-        return switch (operation) {
-            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(ctx, om, paymentPositions, builder, 0, null);
-            case DELETE -> queueService.enqueueDeleteMessage(ctx, om, IUPDList, builder, 0);
+    public boolean enqueue(
+            ExecutionContext ctx,
+            ObjectMapper om,
+            UploadInput input,
+            String uploadKey,
+            String fiscalCode,
+            String broker,
+            ServiceType serviceType) {
+
+        QueueService queueService = getQueueService();
+
+        QueueMessage.QueueMessageBuilder builder = queueService.generateMessageBuilder(
+                input.getOperation(),
+                uploadKey,
+                fiscalCode,
+                broker,
+                serviceType
+        );
+
+        return switch (input.getOperation()) {
+            case CREATE, UPDATE -> queueService.enqueueUpsertMessage(
+                    ctx,
+                    om,
+                    input.getPaymentPositions(),
+                    builder,
+                    0,
+                    null
+            );
+            case DELETE -> queueService.enqueueDeleteMessage(
+                    ctx,
+                    om,
+                    input.getPaymentPositionIUPDs(),
+                    builder,
+                    0
+            );
         };
+    }
+    
+    public boolean failUpload(
+            ExecutionContext ctx,
+            String broker,
+            String fiscalCode,
+            String uploadKey,
+            HttpStatus failureStatus,
+            String failureMessage) {
+
+        return StatusService.getInstance()
+                .failStatus(ctx.getInvocationId(), broker, fiscalCode, uploadKey, failureStatus, failureMessage);
     }
 }

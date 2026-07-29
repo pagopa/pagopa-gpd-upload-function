@@ -8,95 +8,128 @@ import com.azure.storage.blob.BlobServiceClientBuilder;
 import com.azure.storage.blob.models.BlobProperties;
 import com.azure.storage.blob.models.BlobStorageException;
 import it.gov.pagopa.gpd.upload.model.enumeration.ServiceType;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static it.gov.pagopa.gpd.upload.util.Constants.BLOB_KEY;
 import static it.gov.pagopa.gpd.upload.util.Constants.SERVICE_TYPE_KEY;
 
-@Slf4j
 public class BlobRepository {
-    private final String connectionString = System.getenv("GPD_SA_CONNECTION_STRING");
+    private static final Logger log = LoggerFactory.getLogger(BlobRepository.class);
+
     private static final String REPORT_SUFFIX = "report";
     private static final String INPUT_DIRECTORY = "input";
     private static final String OUTPUT_DIRECTORY = "output";
-    private static final String SERVICE_TYPE_METADATA = "serviceType";
+    private static final String BLOB_PATH_DELIMITER = "/";
+
+    private final String connectionString = System.getenv("GPD_SA_CONNECTION_STRING");
+
     private BlobServiceClient blobServiceClient;
-    private Logger logger;
-
-    private static volatile BlobRepository instance;
-    public static BlobRepository getInstance(Logger logger) {
-        if (instance == null) {
-            synchronized (BlobRepository.class) {
-                if (instance == null) {
-                    instance = new BlobRepository(logger);
-                }
-            }
-        }
-        return instance;
-    }
-
-    private BlobRepository(Logger logger) {
-        this.logger = logger;
-    }
 
     public Map<String, Object> download(String broker, String fiscalCode, String filename) {
         blobServiceClient = new BlobServiceClientBuilder()
-                                    .connectionString(connectionString)
-                                    .buildClient();
+                .connectionString(connectionString)
+                .buildClient();
+
         blobServiceClient.createBlobContainerIfNotExists(broker);
+
         BlobContainerClient container = blobServiceClient.getBlobContainerClient(broker);
 
-        if(!container.exists())
-            logger.log(Level.INFO, () -> "container doesn't exist");
+        if (Boolean.FALSE.equals(container.exists())) {
+            log.warn("[BlobRepository] Container {} does not exist", broker);
+        }
 
-        String blobName = "/" + fiscalCode + "/" + INPUT_DIRECTORY + "/" + filename;
+        String blobName = buildInputBlobPath(fiscalCode, filename);
+
         BlobClient blobClient = container.getBlobClient(blobName);
-        if(!blobClient.exists())
-            logger.log(Level.INFO, () -> "blob doesn't exist: " + blobName);
+
+        if (Boolean.FALSE.equals(blobClient.exists())) {
+            log.warn("[BlobRepository] Blob {} does not exist in container {}", blobName, broker);
+        }
 
         BlobProperties properties = blobClient.getProperties();
-        ServiceType serviceType = ServiceType.valueOf(properties.getMetadata().getOrDefault(SERVICE_TYPE_KEY, ServiceType.GPD.name()));
 
-        return Map.of(BLOB_KEY, blobClient.downloadContent(), SERVICE_TYPE_KEY, serviceType);
+        ServiceType serviceType = ServiceType.valueOf(
+                properties.getMetadata().getOrDefault(SERVICE_TYPE_KEY, ServiceType.GPD.name())
+        );
+
+        log.info("[BlobRepository] Downloading blob {} from container {} with serviceType {}",
+                blobName, broker, serviceType);
+
+        return Map.of(
+                BLOB_KEY, blobClient.downloadContent(),
+                SERVICE_TYPE_KEY, serviceType
+        );
     }
 
     public boolean uploadReport(String data, String broker, String fiscalCode, String filename, ServiceType serviceType) {
-        String blobPath = "/" + fiscalCode + "/" + OUTPUT_DIRECTORY + "/" + REPORT_SUFFIX + filename;
-        boolean uploadResponse = this.upload(data, broker, blobPath);
-        if(uploadResponse){
+        String blobPath = buildReportBlobPath(fiscalCode, filename);
+
+        final boolean reportUploaded = upload(data, broker, blobPath);
+
+        if (reportUploaded) {
             setServiceTypeMetadata(serviceType, broker, blobPath);
         }
-        return uploadResponse;
+
+        return reportUploaded;
     }
 
     private boolean upload(String data, String container, String blobPath) {
         try {
             blobServiceClient = new BlobServiceClientBuilder()
-                                        .connectionString(connectionString)
-                                        .buildClient();
+                    .connectionString(connectionString)
+                    .buildClient();
+
             blobServiceClient.createBlobContainerIfNotExists(container);
+
             BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(container);
 
-            if (!blobContainerClient.exists())
-                logger.log(Level.SEVERE, () -> "container doesn't exist");
+            if (Boolean.FALSE.equals(blobContainerClient.exists())) {
+                log.error("[BlobRepository] Container {} does not exist", container);
+            }
+
             BlobClient blobClient = blobContainerClient.getBlobClient(blobPath);
             blobClient.upload(BinaryData.fromString(data));
+
+            log.info("[BlobRepository] Uploaded report blob {} to container {}", blobPath, container);
+
             return true;
         } catch (BlobStorageException e) {
-            logger.log(Level.SEVERE, () -> "BlobStorageException " + e.getMessage());
+            log.error("[BlobRepository] BlobStorageException while uploading blob {} to container {}",
+                    blobPath, container, e);
             return false;
         }
     }
 
-    private void setServiceTypeMetadata(ServiceType serviceType, String container, String blobPath){
-        Map<String, String> metadata = Map.of(SERVICE_TYPE_METADATA, serviceType.name());
+    private void setServiceTypeMetadata(ServiceType serviceType, String container, String blobPath) {
+        Map<String, String> metadata = Map.of(SERVICE_TYPE_KEY, serviceType.name());
+
         BlobContainerClient blobContainerClient = blobServiceClient.getBlobContainerClient(container);
         blobContainerClient.getBlobClient(blobPath).setMetadata(metadata);
+
+        log.info("[BlobRepository] Set serviceType metadata {} on blob {} in container {}",
+                serviceType, blobPath, container);
+    }
+
+    private String buildInputBlobPath(String fiscalCode, String filename) {
+        return String.join(
+                BLOB_PATH_DELIMITER,
+                "",
+                fiscalCode,
+                INPUT_DIRECTORY,
+                filename
+        );
+    }
+
+    private String buildReportBlobPath(String fiscalCode, String filename) {
+        return String.join(
+                BLOB_PATH_DELIMITER,
+                "",
+                fiscalCode,
+                OUTPUT_DIRECTORY,
+                REPORT_SUFFIX + filename
+        );
     }
 }
-
-

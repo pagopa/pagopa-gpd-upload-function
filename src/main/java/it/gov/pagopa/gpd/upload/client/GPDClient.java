@@ -16,70 +16,71 @@ import javax.ws.rs.client.Invocation;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GPDClient {
-    private static GPDClient instance;
+	private static final Logger log = LoggerFactory.getLogger(GPDClient.class);
     private static final String HEADER_REQUEST_ID = "X-Request-Id";
     private static final String HEADER_SUBSCRIPTION_KEY = "Ocp-Apim-Subscription-Key";
-    private static final String GPD_DEBT_POSITIONS_PATH_V1 = "/v1/organizations/%s/debtpositions?serviceType=%s";
     private static final String GPD_DEBT_POSITIONS_PATH_V2 = "/v2/organizations/%s/debtpositions?serviceType=%s";
-    private static final String URI_SEPARATOR = "/";
     private static final String GPD_HOST = System.getenv("GPD_HOST");
     private static final String GPD_SUBSCRIPTION_KEY = System.getenv("GPD_SUBSCRIPTION_KEY");
     private static final String TO_PUBLISH_QUERY_PARAM = "toPublish";
     private static final boolean TO_PUBLISH_QUERY_VALUE = true;
-    private Logger logger;
 
-    public GPDClient(Logger logger) {
-        this.logger = logger;
-    }
-
-    public static GPDClient getInstance(Logger logger) {
-        if (instance == null) {
-            instance = new GPDClient(logger);
-        }
-        return instance;
-    }
 
     public ResponseGPD createDebtPosition(RequestGPD req) {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
-        return CRUD_GPD(HttpMethod.POST, path, req);
+        return crudGpd(HttpMethod.POST, path, req);
     }
 
     public ResponseGPD updateDebtPosition(RequestGPD req) {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
-        return CRUD_GPD(HttpMethod.PUT, path, req);
+        return crudGpd(HttpMethod.PUT, path, req);
     }
 
     public ResponseGPD deleteDebtPosition(RequestGPD req) {
         String path = GPD_HOST + String.format(GPD_DEBT_POSITIONS_PATH_V2, req.getOrgFiscalCode(), req.getServiceType());
-        return CRUD_GPD(HttpMethod.DELETE, path, req);
+        return crudGpd(HttpMethod.DELETE, path, req);
     }
     
-    private ResponseGPD CRUD_GPD(HttpMethod method, String path, RequestGPD req) {
+    private ResponseGPD crudGpd(HttpMethod method, String path, RequestGPD req) {
         Response response = null;
         try {
             response = callGPD(method.name(), path, req.getBody());
+
+            if (response == null) {
+                log.warn("[GPDClient][{}] GPD call returned a null response", method.name());
+                return buildInternalServerErrorResponse();
+            }
+
             return mapResponse(response);
         } catch (RuntimeException e) {
             // Log and prudential fallback: RETRY with 500 + standard message
-            logger.log(Level.WARNING, String.format("[GPDClient][%s] Unexpected runtime error: %s",
-                    method.name(), e.getMessage()), e);
+            log.warn("[GPDClient][{}] Unexpected runtime error while calling GPD",
+                    method.name(), e);
 
-            return ResponseGPD.builder()
-                    .retryStep(RetryStep.RETRY)
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                    .detail(formatStatusAndMessage(
-                            HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                            MapUtils.getDetail(HttpStatus.INTERNAL_SERVER_ERROR)))
-                    .build();
+            return buildInternalServerErrorResponse();
         } finally {
             if (response != null) {
-                try { response.close(); } catch (Exception ignore) { /* no-op */ }
+                try {
+                    response.close();
+                } catch (Exception e) {
+                    log.warn("[GPDClient][{}] Error while closing GPD response", method.name(), e);
+                }
             }
         }
+    }
+    
+    private ResponseGPD buildInternalServerErrorResponse() {
+        return ResponseGPD.builder()
+                .retryStep(RetryStep.RETRY)
+                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .detail(formatStatusAndMessage(
+                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                        MapUtils.getDetail(HttpStatus.INTERNAL_SERVER_ERROR)))
+                .build();
     }
 
 
@@ -95,8 +96,9 @@ public class GPDClient {
 
             return builder.method(httpMethod, Entity.json(body));
         } catch (Exception e) {
-            logger.log(Level.WARNING, () -> String.format("[requestId=%s][%sDebtPositions] Exception: %s", requestId, httpMethod, e.getMessage()));
-            return Response.serverError().build();
+        	log.warn("[requestId={}][{}DebtPositions] Exception while calling GPD URL {}",
+        	        requestId, httpMethod, url, e);
+        	return Response.serverError().build();
         }
     }
 

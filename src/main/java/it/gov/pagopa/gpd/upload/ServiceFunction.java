@@ -23,60 +23,83 @@ import it.gov.pagopa.gpd.upload.util.MapUtils;
 
 import java.time.LocalDateTime;
 import java.util.function.Function;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Following function handles request to GPD and update STATUS and REPORT
  */
 public class ServiceFunction {
+	private static final Logger log = LoggerFactory.getLogger(ServiceFunction.class);
 
-    @FunctionName("PaymentPositionDequeueFunction")
-    public void run(
-            @QueueTrigger(name = "ValidPositionsTrigger", queueName = "%VALID_POSITIONS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String message,
-            final ExecutionContext ctx) {
-        Logger logger = ctx.getLogger();
-        String invocationId = ctx.getInvocationId();
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        String subjectFormat = "/containers/%s/blobs/%s/%s";       
-        String subject = String.format(subjectFormat,"NA","NA","NA");
-        try {
-            QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
-            // extract from message
-            String key = msg.getUploadKey();
-            String orgFiscalCode = msg.getOrganizationFiscalCode();
-            // process message request
-            Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient(ctx));
-            getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
-            // check if upload is completed
-            Status status = getStatusService(ctx).getStatus(invocationId, orgFiscalCode, key);
-            if(status.upload.getCurrent() == status.upload.getTotal()) {
-            	subject = String.format(subjectFormat,
-            			msg.getBrokerCode(),msg.getOrganizationFiscalCode(),msg.getUploadKey());
-            	// Unlock idempotency key
-            	IdempotencyUploadTracker.unlock(subject);
-                LocalDateTime endTime = LocalDateTime.now();
-                status.upload.setEnd(endTime);
-                getStatusService(ctx).updateStatusEndTime(orgFiscalCode, key, endTime);
-                generateReport(logger, key, status);
-            }
-            Runtime.getRuntime().gc();
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, () -> String.format("[id=%s][ServiceFunction] Processing function exception: %s, message: %s, caused by: %s, localized-message: %s",
-                    invocationId, e.getClass(), e.getMessage(), e.getCause(), e.getLocalizedMessage()));
-            // Unlock idempotency key
-            IdempotencyUploadTracker.unlock(subject);
-            
-        }
-    }
+	private static final String LOG_PREFIX = "[id={}][upload={}][ServiceFunction]";
+	private static final String SUBJECT_FORMAT = "/containers/%s/blobs/%s/%s";
 
-    public boolean generateReport(Logger logger, String uploadKey, Status status) throws JsonProcessingException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-        objectMapper.registerModule(new JavaTimeModule());
-        return BlobRepository.getInstance(logger).uploadReport(objectMapper.writeValueAsString(MapUtils.convert(status)), status.getBrokerID(), status.getFiscalCode(), uploadKey + ".json", status.getServiceType());
-    }
+	@FunctionName("PaymentPositionDequeueFunction")
+	public void run(
+	        @QueueTrigger(name = "ValidPositionsTrigger", queueName = "%VALID_POSITIONS_QUEUE%", connection = "GPD_SA_CONNECTION_STRING") String message,
+	        final ExecutionContext ctx) {
+	    String invocationId = ctx.getInvocationId();
+	    ObjectMapper objectMapper = new ObjectMapper();
+	    objectMapper.registerModule(new JavaTimeModule());
+	    String subject = String.format(SUBJECT_FORMAT, "NA", "NA", "NA");
+	    String uploadKey = "-";
+
+	    try {
+	        QueueMessage msg = objectMapper.readValue(message, QueueMessage.class);
+	        // extract from message
+	        uploadKey = msg.getUploadKey();
+	        String orgFiscalCode = msg.getOrganizationFiscalCode();
+	        // process message request
+	        log.info(LOG_PREFIX + " Processing queue message for organization {} and operation {}",
+	                invocationId, uploadKey, orgFiscalCode, msg.getCrudOperation());
+	        Function<RequestGPD, ResponseGPD> method = getMethod(msg, getGPDClient());
+	        getOperationService(ctx, method, getPositionMessage(msg)).processRequestInBulk();
+	        // check if upload is completed
+	        Status status = getStatusService().getStatus(invocationId, orgFiscalCode, uploadKey);
+	        if (status.upload.getCurrent() == status.upload.getTotal()) {
+	            subject = String.format(
+	                    SUBJECT_FORMAT,
+	                    msg.getBrokerCode(),
+	                    msg.getOrganizationFiscalCode(),
+	                    msg.getUploadKey()
+	            );
+	            // Unlock idempotency key
+	            IdempotencyUploadTracker.unlock(subject);
+	            LocalDateTime endTime = LocalDateTime.now();
+	            status.upload.setEnd(endTime);
+	            getStatusService().updateStatusEndTime(orgFiscalCode, uploadKey, endTime);
+	            boolean reportGenerated = generateReport(uploadKey, status);
+	            if (reportGenerated) {
+	                log.info(LOG_PREFIX + " Upload completed and report generated. Subject unlocked: {}",
+	                        invocationId, uploadKey, subject);
+	            } else {
+	                log.warn(LOG_PREFIX + " Upload completed but report generation failed. Subject unlocked: {}",
+	                        invocationId, uploadKey, subject);
+	            }
+	        }
+	        Runtime.getRuntime().gc();
+	    } catch (Exception e) {
+	        log.error(LOG_PREFIX + " Processing function exception. Subject will be unlocked: {}",
+	                invocationId, uploadKey, subject, e);
+	        // Unlock idempotency key
+	        IdempotencyUploadTracker.unlock(subject);
+	    }
+	}
+
+	public boolean generateReport(String uploadKey, Status status) throws JsonProcessingException {
+	    ObjectMapper objectMapper = new ObjectMapper();
+	    objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+	    objectMapper.registerModule(new JavaTimeModule());
+
+	    return getBlobRepository().uploadReport(
+	            objectMapper.writeValueAsString(MapUtils.convert(status)),
+	            status.getBrokerID(),
+	            status.getFiscalCode(),
+	            uploadKey + ".json",
+	            status.getServiceType()
+	    );
+	}
 
     public Function<RequestGPD, ResponseGPD> getMethod(QueueMessage msg, GPDClient gpdClient) {
         return switch (msg.getCrudOperation()) {
@@ -87,7 +110,7 @@ public class ServiceFunction {
     }
 
     public CRUDService getOperationService(ExecutionContext ctx, Function<RequestGPD, ResponseGPD> method, DebtPositionMessage debtPositionMessage) {
-        return new CRUDService(ctx, method, debtPositionMessage, getStatusService(ctx));
+        return new CRUDService(ctx, method, debtPositionMessage, getStatusService());
     }
 
     public DebtPositionMessage getPositionMessage(QueueMessage queueMessage) {
@@ -97,11 +120,15 @@ public class ServiceFunction {
         };
     }
 
-    public StatusService getStatusService(ExecutionContext ctx) {
-        return StatusService.getInstance(ctx.getLogger());
+    public StatusService getStatusService() {
+        return StatusService.getInstance();
     }
 
-    public GPDClient getGPDClient(ExecutionContext context) {
-        return GPDClient.getInstance(context.getLogger());
+    public GPDClient getGPDClient() {
+    	return new GPDClient();
+    }
+    
+    public BlobRepository getBlobRepository() {
+        return new BlobRepository();
     }
 }
